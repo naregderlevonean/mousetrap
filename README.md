@@ -27,7 +27,7 @@ A lightweight, native hot-corner and edge-action addon for **Hyprland 0.55+**, w
 Place the files into your Hyprland directory:
 
 ```text
-.../mousetrap/mousetrap.lua
+.../mousetrap.lua
 .../mousetrap/
     ├── init.lua
     ├── core.lua
@@ -38,7 +38,7 @@ Add the configuration to your main Hyprland Lua initialization script:
 
 ```lua
 local mousetrap = require("hyprland.extensions.addons.mousetrap.init").setup({
-    geom = {
+    geometry = {
         default = { corner = 4, edge = 2 },
         ["eDP-1"] = { corner = 60, edge = 10 } 
     }
