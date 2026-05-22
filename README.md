@@ -1,3 +1,4 @@
+![Cheese](Cheese.png)
 
 
 
@@ -6,7 +7,6 @@
 # mousetrap
 
 A lightweight, native hot-corner and edge-action addon for **Hyprland 0.55+**, written entirely in Lua: leverages Hyprland's built-in Lua runtime to provide programmable actions for your screen edges and corners.
-
 
 
 
