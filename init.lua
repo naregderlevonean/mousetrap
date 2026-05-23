@@ -2,7 +2,7 @@ local M = {}
 
 M._VERSION = "0.1.0"
 
-local path = (...):match("(.-)[^%.]+$")
+local path = (...):gsub("%.init$", "")
 
 local core = require(path .. ".core")
 local default = require(path .. ".config")
@@ -42,11 +42,16 @@ function M.toggle()
 end
 
 function M.bind(zone, callback, opts)
+    local has_flick = opts and type(opts.flick) == "number"
+    local delay = (opts and opts.delay) or 0
+    
+    if has_flick then delay = 0 end
+
     M.config.binds[zone] = {
         callback = callback,
-        delay = (opts and opts.delay) or 0
+        delay = delay,
+        flick = has_flick and opts.flick or nil
     }
 end
 
 return M
-

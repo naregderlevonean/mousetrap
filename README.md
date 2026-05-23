@@ -18,6 +18,7 @@ A lightweight, native hot-corner and edge-action addon for **Hyprland 0.55+**, w
 * **Multi-Monitor & DPI Ready**: Automatically calculates logical coordinates based on individual monitor scales and transformations.
 * **Low Latency**: Operates on a 16ms ticker loop for responsive triggering.
 * **Configurable Dwell Time**: Use delays to prevent accidental triggers while moving your mouse across the screen edges.
+* **Flick Gestures**: Detects fast cursor movements against edges for quick, intentional actions.
 
 
 
@@ -37,43 +38,30 @@ Place the files into your Hyprland directory:
 Add the configuration to your main Hyprland Lua initialization script:
 
 ```lua
-local mousetrap = require("hyprland.extensions.addons.mousetrap.init").setup({
+local mousetrap = require("...mousetrap.init").setup({
     geometry = {
         default = { corner = 4, edge = 2 },
-        ["eDP-1"] = { corner = 60, edge = 10 } 
+        [ "eDP-1" ] = { corner = 60, edge = 10 },
     }
 })
 
--- Top-left corner: Toggle overview
-mousetrap.bind("top-left", function()
-    hl.exec_cmd("hyprctl dispatch overview:toggle")
-end)
+-- Cursor touches the edge
+mousetrap.bind( "top-left", function() 
+    hl.exec_cmd( "notify-send 'Mousetrap: Touching'" ) 
+end) 
 
--- Top-right corner: Lock screen with delay
-mousetrap.bind("top-right", function()
-    hl.exec_cmd("hyprlock")
-end, { delay = 2000 })
+-- Holding at the edge for 2 seconds
+mousetrap.bind( "top-right", function() 
+    hl.exec_cmd( "notify-send 'Mousetrap: Delayed touch'" ) 
+end, { delay = 2000 }) 
 
--- Bottom-right corner: Close active window
-mousetrap.bind("bottom-right", function()
-    hl.exec_cmd("hyprctl dispatch killactive")
-end)
+-- A quick flick against the edge
+mousetrap.bind( "top", function() 
+    hl.exec_cmd( "notify-send 'Mousetrap: Flick gesture'" ) 
+end, { flick = 50 }) 
 
--- Bottom edge: Launch terminal and send notification
-mousetrap.bind("bottom", function()
-    hl.exec_cmd("kitty")
-    hl.exec_cmd("notify-send 'Mousetrap' 'Bottom edge trigger'")
-end)
-
--- Right edge: Change workspace only on specific monitor
-mousetrap.bind("right", function(zone, monitor)
-    if monitor == "DP-1" then
-        hl.exec_cmd("hyprctl dispatch workspace +1")
-    end
-end)
-
--- Start the addon
-addons.mousetrap = mousetrap
+-- Initialize
+addons.mousetrap = mousetrap 
 addons.mousetrap.start()
 ```
 
@@ -103,7 +91,7 @@ addons.mousetrap.start()
 	* Edges: `"top"`, `"bottom"`, `"left"`, `"right"`
 * **`callback`** `(function)`: Code to run on trigger. Automatically receives `(zone, monitor)`.
 * **`opts.delay`** `(number, optional)`: Dwell time in milliseconds before firing (default: `0`).
-
+* **`opts.flick`** `(number, optional)`: Minimum cursor speed required to trigger a flick gesture.
 
 
 

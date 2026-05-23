@@ -5,7 +5,9 @@ local state = {
     monitor = nil,
     zone = "none",
     time = 0,
-    triggered = false
+    triggered = false,
+    last_x = nil,
+    last_y = nil
 }
 
 local get_cursor = hl.get_cursor_pos
@@ -53,16 +55,45 @@ local function tick()
     local x, y = cursor.x - monitor.x, cursor.y - monitor.y
     local zone = get_zone_at_pos(x, y, monitor, geometry)
 
+    local last_x = state.last_x
+    local last_y = state.last_y
+    
+    state.last_x, state.last_y = x, y
+
     if zone ~= state.zone or monitor.name ~= state.monitor then
         state.zone, state.monitor = zone, monitor.name
         state.time, state.triggered = 0, false
+
+        if zone ~= "none" then
+            local binding = config.binds[zone]
+            if binding and binding.flick then
+                if last_x and last_y then
+                    local dx = x - last_x
+                    local dy = y - last_y
+                    local distance = math.sqrt(dx * dx + dy * dy)
+                    
+                    if distance >= binding.flick then
+                        state.triggered = true
+                        binding.callback(zone, monitor.name)
+                    else
+                        state.triggered = true
+                    end
+                else
+                    state.triggered = true 
+                end
+            end
+        end
+
     elseif zone ~= "none" and not state.triggered then
-        state.time = state.time + 16
+        local binding = config.binds[zone]
+        if binding then
+            state.time = state.time + 16
+        end
     end
 
     if zone ~= "none" and not state.triggered then
         local binding = config.binds[zone]
-        if binding and state.time >= (binding.delay or 0) then 
+        if binding and not binding.flick and state.time >= binding.delay then 
             state.triggered = true
             binding.callback(zone, monitor.name)
         end
@@ -75,8 +106,10 @@ end
 
 function M.start()
     if not state.timer then
+        state.last_x, state.last_y = nil, nil
         state.timer = create_timer(tick, { type = "repeat", timeout = 16 })
     else
+        state.last_x, state.last_y = nil, nil
         state.timer:set_enabled(true)
     end
 end
@@ -84,6 +117,7 @@ end
 function M.stop()
     if state.timer then state.timer:set_enabled(false) end
     state.zone, state.monitor, state.time, state.triggered = "none", nil, 0, false
+    state.last_x, state.last_y = nil, nil
 end
 
 function M.toggle()
