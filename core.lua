@@ -7,7 +7,14 @@ local state = {
     time = 0,
     triggered = false,
     last_x = nil,
-    last_y = nil
+    last_y = nil,
+    active_binding = nil, 
+    modifiers = {
+        super = false,
+        shift = false,
+        ctrl = false,
+        alt = false
+    }
 }
 
 local get_cursor = hl.get_cursor_pos
@@ -19,7 +26,8 @@ local config = nil
 
 local function get_zone_at_pos(x, y, monitor, geometry)
     local scale = monitor.scale or 1
-    local width, height = monitor.width / scale, monitor.height / scale
+    local inv_scale = 1 / scale
+    local width, height = monitor.width * inv_scale, monitor.height * inv_scale
     
     local transform = monitor.transform or 0
     if transform == 1 or transform == 3 then
@@ -44,6 +52,23 @@ local function get_zone_at_pos(x, y, monitor, geometry)
     return "none"
 end
 
+local function get_active_binding(zone)
+    local binds = config.binds[zone]
+    if not binds then return nil end
+
+    local sm = state.modifiers
+    for _, b in ipairs(binds) do
+        local bm = b.modifiers
+        if bm.super == sm.super and
+           bm.shift == sm.shift and
+           bm.ctrl == sm.ctrl and
+           bm.alt == sm.alt then
+            return b
+        end
+    end
+    return nil
+end
+
 local function tick()
     if not config then return end
     
@@ -55,24 +80,24 @@ local function tick()
     local x, y = cursor.x - monitor.x, cursor.y - monitor.y
     local zone = get_zone_at_pos(x, y, monitor, geometry)
 
+
+    local binding = get_active_binding(zone)
+
     local last_x = state.last_x
     local last_y = state.last_y
-    
     state.last_x, state.last_y = x, y
 
-    if zone ~= state.zone or monitor.name ~= state.monitor then
-        state.zone, state.monitor = zone, monitor.name
+    if zone ~= state.zone or monitor.name ~= state.monitor or binding ~= state.active_binding then
+        state.zone, state.monitor, state.active_binding = zone, monitor.name, binding
         state.time, state.triggered = 0, false
 
-        if zone ~= "none" then
-            local binding = config.binds[zone]
-            if binding and binding.flick then
+        if zone ~= "none" and binding then
+            if binding.flick_sq then
                 if last_x and last_y then
                     local dx = x - last_x
                     local dy = y - last_y
-                    local distance = math.sqrt(dx * dx + dy * dy)
                     
-                    if distance >= binding.flick then
+                    if (dx * dx + dy * dy) >= binding.flick_sq then
                         state.triggered = true
                         binding.callback(zone, monitor.name)
                     else
@@ -84,16 +109,10 @@ local function tick()
             end
         end
 
-    elseif zone ~= "none" and not state.triggered then
-        local binding = config.binds[zone]
-        if binding then
-            state.time = state.time + 16
-        end
-    end
-
-    if zone ~= "none" and not state.triggered then
-        local binding = config.binds[zone]
-        if binding and not binding.flick and state.time >= binding.delay then 
+    elseif zone ~= "none" and binding and not state.triggered then
+        state.time = state.time + 16
+        
+        if not binding.flick_sq and state.time >= binding.delay then 
             state.triggered = true
             binding.callback(zone, monitor.name)
         end
@@ -102,6 +121,15 @@ end
 
 function M.init(active_config)
     config = active_config
+end
+
+function M.set_modifiers(modifiers)
+    if type(modifiers) ~= "table" then return end
+    for k, v in pairs(modifiers) do
+        if state.modifiers[k] ~= nil then
+            state.modifiers[k] = v
+        end
+    end
 end
 
 function M.start()
@@ -118,6 +146,7 @@ function M.stop()
     if state.timer then state.timer:set_enabled(false) end
     state.zone, state.monitor, state.time, state.triggered = "none", nil, 0, false
     state.last_x, state.last_y = nil, nil
+    state.active_binding = nil
 end
 
 function M.toggle()

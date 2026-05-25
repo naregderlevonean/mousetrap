@@ -67,14 +67,40 @@ addons.mousetrap.start()
 
 
 
+### Using Modifier Keys (Workaround)
+
+To trigger corner actions only when specific keys are held (e.g., holding `Alt` while pushing the cursor to the top), you must bind your physical keys to tell the plugin when the state changes.
+
+```lua
+-- Bind physical key presses/releases to change the plugin's internal state
+-- Pressing ALT_L enables the alt modifier
+hl.bind("ALT_L", mousetrap.modifiers({ alt = true })) 
+
+-- Releasing ALT_L disables it
+-- Note: Some setups require the "Mod + Key" syntax for release events
+hl.bind("ALT + ALT_L", mousetrap.modifiers({ alt = false }), { release = true })
+
+-- Define a corner action that requires this modifier
+mousetrap.bind("top", function()
+    hl.exec_cmd("notify-send 'Secret Menu Activated!'")
+end, { 
+    delay = 200,
+    modifiers = { alt = true } 
+})
+```
+
+
+
 
 ## API Reference
 
-| Method                            | Description                                           |
-| :-------------------------------- | :---------------------------------------------------- |
-| `setup(config)`                   | Initializes the addon with monitor geometry settings. |
-| `bind(zone, callback, opts)`      | Binds a function to a specific screen corner or edge. |
-| `start()`, `stop()` or `toggle()` | Controls the evaluation loop.                         |
+| Method                            | Description                                             |
+| :-------------------------------- | :------------------------------------------------------ |
+| `setup(config)`                   | Initializes the addon with monitor geometry settings.   |
+| `bind(zone, callback, opts)`      | Binds a function to a specific screen corner or edge.   |
+| `modifiers(mods)`                 | Returns a state-update function for use with `hl.bind`. |
+| `start()`, `stop()` or `toggle()` | Controls the evaluation loop.                           |
+
 
 #### Parameters
 
@@ -92,6 +118,7 @@ addons.mousetrap.start()
 * **`callback`** `(function)`: Code to run on trigger. Automatically receives `(zone, monitor)`.
 * **`opts.delay`** `(number, optional)`: Dwell time in milliseconds before firing (default: `0`).
 * **`opts.flick`** `(number, optional)`: Minimum cursor speed required to trigger a flick gesture.
+* **`opts.modifiers`** `(table)`: Modifiers required (e.g., `{ alt = true }`).
 
 
 
