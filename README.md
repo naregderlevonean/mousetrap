@@ -100,6 +100,7 @@ end, {
 | `bind(zone, callback, opts)`      | Binds a function to a specific screen corner or edge.   |
 | `modifiers(mods)`                 | Returns a state-update function for use with `hl.bind`. |
 | `start()`, `stop()` or `toggle()` | Controls the evaluation loop.                           |
+| `status()`                        | Checks whether the evaluation loop is actively running. |
 
 
 #### Parameters

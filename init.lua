@@ -31,10 +31,6 @@ function M.setup(config)
     return M
 end
 
-function M.start() core.start() end
-function M.stop()  core.stop()  end
-function M.toggle() core.toggle() end
-
 function M.modifiers(mods)
     return function()
         core.set_modifiers(mods)
@@ -65,6 +61,22 @@ function M.bind(zone, callback, options)
         flick_sq = has_flick and (options.flick * options.flick) or nil,
         modifiers = normalized_mod
     })
+end
+
+function M.start()
+    core.start()
+end
+
+function M.stop()
+    core.stop()
+end
+
+function M.toggle()
+    core.toggle()
+end
+
+function M.status()
+    return core.status()
 end
 
 return M

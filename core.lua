@@ -159,4 +159,11 @@ function M.toggle()
     end
 end
 
+function M.status()
+    if state.timer then
+        return state.timer:is_enabled() == true
+    end
+    return false
+end
+
 return M
