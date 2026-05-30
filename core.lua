@@ -53,6 +53,7 @@ local function get_zone_at_pos(x, y, monitor, geometry)
 end
 
 local function get_active_binding(zone)
+    if not config or not config.binds then return nil end
     local binds = config.binds[zone]
     if not binds then return nil end
 
@@ -79,42 +80,37 @@ local function tick()
     local geometry = config.geometry[monitor.name] or config.geometry.default or EMPTY_GEOM
     local x, y = cursor.x - monitor.x, cursor.y - monitor.y
     local zone = get_zone_at_pos(x, y, monitor, geometry)
-
-
     local binding = get_active_binding(zone)
 
     local last_x = state.last_x
     local last_y = state.last_y
     state.last_x, state.last_y = x, y
 
+    local velocity_sq = 0
+    if last_x and last_y then
+        local dx = x - last_x
+        local dy = y - last_y
+        velocity_sq = (dx * dx) + (dy * dy)
+    end
+
     if zone ~= state.zone or monitor.name ~= state.monitor or binding ~= state.active_binding then
         state.zone, state.monitor, state.active_binding = zone, monitor.name, binding
-        state.time, state.triggered = 0, false
+        state.time = 0
+        state.triggered = false
+    end
 
-        if zone ~= "none" and binding then
-            if binding.flick_sq then
-                if last_x and last_y then
-                    local dx = x - last_x
-                    local dy = y - last_y
-                    
-                    if (dx * dx + dy * dy) >= binding.flick_sq then
-                        state.triggered = true
-                        binding.callback(zone, monitor.name)
-                    else
-                        state.triggered = true
-                    end
-                else
-                    state.triggered = true 
-                end
+    if zone ~= "none" and binding and not state.triggered then
+        if binding.flick_sq then
+            if velocity_sq >= binding.flick_sq then
+                state.triggered = true
+                binding.callback(zone, monitor.name)
             end
-        end
-
-    elseif zone ~= "none" and binding and not state.triggered then
-        state.time = state.time + 16
-        
-        if not binding.flick_sq and state.time >= binding.delay then 
-            state.triggered = true
-            binding.callback(zone, monitor.name)
+        else
+            state.time = state.time + 16
+            if state.time >= binding.delay then 
+                state.triggered = true
+                binding.callback(zone, monitor.name)
+            end
         end
     end
 end
@@ -167,3 +163,4 @@ function M.status()
 end
 
 return M
+
