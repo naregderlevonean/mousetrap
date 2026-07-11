@@ -120,7 +120,31 @@ local function tick()
 
 	if zone ~= "none" and binding and not state.triggered then
 		if binding.flick_sq then
-			if velocity_sq >= binding.flick_sq then
+			local dx = x - last_x
+			local dy = y - last_y
+
+			local is_fast_enough = velocity_sq >= binding.flick_sq
+
+			local correct_direction = false
+			if zone == "top" and dy < -5 then
+				correct_direction = true
+			elseif zone == "bottom" and dy > 5 then
+				correct_direction = true
+			elseif zone == "left" and dx < -5 then
+				correct_direction = true
+			elseif zone == "right" and dx > 5 then
+				correct_direction = true
+			elseif zone == "top-left" and dx < -3 and dy < -3 then
+				correct_direction = true
+			elseif zone == "top-right" and dx > 3 and dy < -3 then
+				correct_direction = true
+			elseif zone == "bottom-left" and dx < -3 and dy > 3 then
+				correct_direction = true
+			elseif zone == "bottom-right" and dx > 3 and dy > 3 then
+				correct_direction = true
+			end
+
+			if is_fast_enough and correct_direction then
 				state.triggered = true
 				binding.callback(zone, monitor.name)
 			end
