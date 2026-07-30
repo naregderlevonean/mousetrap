@@ -1,33 +1,38 @@
 local M = {}
 
-M._VERSION = "0.2.1"
+M._VERSION = "0.4.0"
 
 local path = (...):gsub("%.init$", "")
 
 local core = require(path .. ".core")
 local default = require(path .. ".config")
+local Binding = require(path .. ".binding")
 
-function M.setup(config)
-	M.config = {}
+local function clone(tbl)
+	local result = {}
 
-	for key, val in pairs(default) do
-		if type(val) == "table" then
-			M.config[key] = {}
-			for sub_key, sub_val in pairs(val) do
-				M.config[key][sub_key] = sub_val
-			end
+	for key, value in pairs(tbl) do
+		if type(value) == "table" then
+			result[key] = clone(value)
 		else
-			M.config[key] = val
+			result[key] = value
 		end
 	end
 
+	return result
+end
+
+function M.setup(config)
+	M.config = clone(default)
+
 	if config and config.geometry then
-		for monitor, data in pairs(config.geometry) do
-			M.config.geometry[monitor] = data
+		for monitor, geometry in pairs(config.geometry) do
+			M.config.geometry[monitor] = geometry
 		end
 	end
 
 	core.init(M.config)
+
 	return M
 end
 
@@ -38,31 +43,15 @@ function M.modifiers(mods)
 end
 
 function M.bind(zone, callback, options)
-	local has_flick = options and type(options.flick) == "number"
-	local delay = (options and options.delay) or 0
-	local modifier_options = (options and (options.modifiers or options.mod)) or {}
-
-	if has_flick then
-		delay = 0
+	if not M.config then
+		error("mousetrap: call setup() before bind()")
 	end
-
-	local normalized_mod = {
-		super = modifier_options.super or false,
-		shift = modifier_options.shift or false,
-		ctrl = modifier_options.ctrl or false,
-		alt = modifier_options.alt or false,
-	}
 
 	if not M.config.binds[zone] then
 		M.config.binds[zone] = {}
 	end
 
-	table.insert(M.config.binds[zone], {
-		callback = callback,
-		delay = delay,
-		flick_sq = has_flick and (options.flick * options.flick) or nil,
-		modifiers = normalized_mod,
-	})
+	table.insert(M.config.binds[zone], Binding.new(callback, options))
 end
 
 function M.start()
