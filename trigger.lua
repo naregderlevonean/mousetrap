@@ -23,11 +23,7 @@ function M.exit(state, old_zone, binding, new_zone, monitor)
 
 	state.triggered = true
 
-	pcall(
-		binding.callback,
-		old_zone,
-		monitor
-	)
+	pcall(binding.callback, old_zone, monitor)
 end
 
 local function check_zone_direction(zone, dx, dy)
@@ -66,8 +62,24 @@ local function check_direction(direction, dx, dy)
 	return false
 end
 
+local function fire(state, binding, monitor)
+	pcall(binding.callback, state.zone, monitor)
+
+	if binding.loop then
+		state.time = 0
+		state.direction_x = 0
+		state.direction_y = 0
+	else
+		state.triggered = true
+	end
+end
+
 function M.update(state, x, y, monitor, binding)
-	if state.triggered or not binding then
+	if not binding then
+		return
+	end
+
+	if state.triggered then
 		return
 	end
 
@@ -83,20 +95,15 @@ function M.update(state, x, y, monitor, binding)
 
 	if binding.direction then
 		state.direction_x = state.direction_x + dx
+
 		state.direction_y = state.direction_y + dy
 
-		if not check_direction(
-			binding.direction,
-			state.direction_x,
-			state.direction_y
-		) then
+		if not check_direction(binding.direction, state.direction_x, state.direction_y) then
 			return
 		end
 
 		if binding.distance then
-			local distance =
-				state.direction_x * state.direction_x +
-				state.direction_y * state.direction_y
+			local distance = state.direction_x * state.direction_x + state.direction_y * state.direction_y
 
 			if distance < (binding.distance * binding.distance) then
 				return
@@ -104,23 +111,14 @@ function M.update(state, x, y, monitor, binding)
 		end
 
 		if binding.flick_sq then
-			local distance =
-				state.direction_x * state.direction_x +
-				state.direction_y * state.direction_y
+			local distance = state.direction_x * state.direction_x + state.direction_y * state.direction_y
 
 			if distance < binding.flick_sq then
 				return
 			end
 		end
 
-		state.triggered = true
-
-		pcall(
-			binding.callback,
-			state.zone,
-			monitor
-		)
-
+		fire(state, binding, monitor)
 		return
 	end
 
@@ -129,21 +127,11 @@ function M.update(state, x, y, monitor, binding)
 			return
 		end
 
-		if not check_zone_direction(
-			state.zone,
-			dx,
-			dy
-		) then
+		if not check_zone_direction(state.zone, dx, dy) then
 			return
 		end
 
-		state.triggered = true
-
-		pcall(
-			binding.callback,
-			state.zone,
-			monitor
-		)
+		fire(state, binding, monitor)
 
 		return
 	end
@@ -151,13 +139,7 @@ function M.update(state, x, y, monitor, binding)
 	state.time = state.time + 16
 
 	if state.time >= binding.delay then
-		state.triggered = true
-
-		pcall(
-			binding.callback,
-			state.zone,
-			monitor
-		)
+		fire(state, binding, monitor)
 	end
 end
 
