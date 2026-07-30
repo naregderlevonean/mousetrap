@@ -17,12 +17,16 @@ function M.set_modifiers(modifiers)
 
 	for key, value in pairs(modifiers) do
 		if state.modifiers[key] ~= nil then
-			state.modifiers[key] = value
+			state.modifiers[key] = value == true
 		end
 	end
 end
 
 local function modifiers_match(required)
+	if not required then
+		return true
+	end
+
 	for key, value in pairs(required) do
 		if state.modifiers[key] ~= value then
 			return false
@@ -32,20 +36,32 @@ local function modifiers_match(required)
 	return true
 end
 
-function M.get_active_binding(zone)
-	if not config or not config.binds then
+local function get_bindings(zone)
+	if not config or type(config.binds) ~= "table" then
 		return nil
 	end
 
 	local binds = config.binds[zone]
+
+	if type(binds) ~= "table" then
+		return nil
+	end
+
+	return binds
+end
+
+function M.get_active_binding(zone)
+	local binds = get_bindings(zone)
 
 	if not binds then
 		return nil
 	end
 
 	for _, binding in ipairs(binds) do
-		if not binding.exit and modifiers_match(binding.modifiers) then
-			return binding
+		if type(binding) == "table" and not binding.exit then
+			if modifiers_match(binding.modifiers) then
+				return binding
+			end
 		end
 	end
 
@@ -53,19 +69,17 @@ function M.get_active_binding(zone)
 end
 
 function M.get_exit_binding(zone)
-	if not config or not config.binds then
-		return nil
-	end
-
-	local binds = config.binds[zone]
+	local binds = get_bindings(zone)
 
 	if not binds then
 		return nil
 	end
 
 	for _, binding in ipairs(binds) do
-		if binding.exit and modifiers_match(binding.modifiers) then
-			return binding
+		if type(binding) == "table" and binding.exit then
+			if modifiers_match(binding.modifiers) then
+				return binding
+			end
 		end
 	end
 

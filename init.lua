@@ -1,6 +1,6 @@
 local M = {}
 
-M._VERSION = "0.4.0"
+M._VERSION = "0.5.0"
 
 local path = (...):gsub("%.init$", "")
 
@@ -8,28 +8,42 @@ local core = require(path .. ".core")
 local default = require(path .. ".config")
 local Binding = require(path .. ".binding")
 
-local function clone(tbl)
+local function clone(value)
+	if type(value) ~= "table" then
+		return value
+	end
+
 	local result = {}
 
-	for key, value in pairs(tbl) do
-		if type(value) == "table" then
-			result[key] = clone(value)
-		else
-			result[key] = value
-		end
+	for key, item in pairs(value) do
+		result[key] = clone(item)
 	end
 
 	return result
 end
 
+local function merge(target, source)
+	if type(source) ~= "table" then
+		return
+	end
+
+	for key, value in pairs(source) do
+		if type(value) == "table" and type(target[key]) == "table" then
+			merge(target[key], value)
+		else
+			target[key] = value
+		end
+	end
+end
+
 function M.setup(config)
 	M.config = clone(default)
 
-	if config and config.geometry then
-		for monitor, geometry in pairs(config.geometry) do
-			M.config.geometry[monitor] = geometry
-		end
+	if type(config) == "table" then
+		merge(M.config, config)
 	end
+
+	M.config.binds = M.config.binds or {}
 
 	core.init(M.config)
 
@@ -47,14 +61,21 @@ function M.bind(zone, callback, options)
 		error("mousetrap: call setup() before bind()")
 	end
 
-	if not M.config.binds[zone] then
-		M.config.binds[zone] = {}
+	if type(zone) ~= "string" then
+		error("mousetrap: zone must be a string")
 	end
 
-	table.insert(
-		M.config.binds[zone],
-		Binding.new(callback, options)
-	)
+	if type(callback) ~= "function" then
+		error("mousetrap: callback must be a function")
+	end
+
+	local binds = M.config.binds
+
+	if not binds[zone] then
+		binds[zone] = {}
+	end
+
+	table.insert(binds[zone], Binding.new(callback, options))
 end
 
 function M.start()

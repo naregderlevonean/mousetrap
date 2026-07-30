@@ -1,5 +1,33 @@
 local M = {}
 
+local function positive_number(value)
+	if type(value) ~= "number" then
+		return nil
+	end
+
+	if value < 0 then
+		return nil
+	end
+
+	return value
+end
+
+local function copy_modifiers(modifiers)
+	local result = {}
+
+	if type(modifiers) ~= "table" then
+		return result
+	end
+
+	for key, value in pairs(modifiers) do
+		if value == true then
+			result[key] = true
+		end
+	end
+
+	return result
+end
+
 function M.new(callback, options)
 	if type(callback) ~= "function" then
 		error("mousetrap: callback must be a function")
@@ -7,32 +35,27 @@ function M.new(callback, options)
 
 	options = options or {}
 
-	local modifiers = options.modifiers or options.mod or {}
+	local flick = positive_number(options.flick)
+	local velocity = positive_number(options.velocity)
+	local distance = positive_number(options.distance)
+	local direction = type(options.direction) == "string" and options.direction or nil
 
-	local has_flick = type(options.flick) == "number"
-	local has_velocity = type(options.velocity) == "number"
-	local has_direction = type(options.direction) == "string"
-	local has_exit = options.exit == true
-	local has_loop = options.loop == true
-
-	local binding_modifiers = {}
-
-	for key, value in pairs(modifiers) do
-		if value == true then
-			binding_modifiers[key] = true
-		end
-	end
+	local immediate =
+		flick ~= nil
+		or velocity ~= nil
+		or direction ~= nil
+		or options.exit == true
 
 	return {
 		callback = callback,
-		delay = (has_flick or has_velocity or has_direction or has_exit) and 0 or (options.delay or 0),
-		flick_sq = has_flick and (options.flick * options.flick) or nil,
-		velocity_sq = has_velocity and (options.velocity * options.velocity) or nil,
-		direction = has_direction and options.direction or nil,
-		distance = type(options.distance) == "number" and options.distance or nil,
-		exit = has_exit,
-		loop = has_loop,
-		modifiers = binding_modifiers,
+		delay = immediate and 0 or (positive_number(options.delay) or 0),
+		flick_sq = flick and flick * flick or nil,
+		velocity_sq = velocity and velocity * velocity or nil,
+		direction = direction,
+		distance = distance,
+		exit = options.exit == true,
+		loop = options.loop == true,
+		modifiers = copy_modifiers(options.modifiers or options.mod),
 	}
 end
 

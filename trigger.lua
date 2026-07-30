@@ -4,16 +4,14 @@ function M.reset(state, zone, monitor, binding)
 	state.zone = zone
 	state.monitor = monitor
 	state.active_binding = binding
-
 	state.time = 0
 	state.triggered = false
-
 	state.direction_x = 0
 	state.direction_y = 0
 end
 
 function M.exit(state, old_zone, binding, new_zone, monitor)
-	if not binding.exit then
+	if not binding or not binding.exit then
 		return
 	end
 
@@ -24,6 +22,10 @@ function M.exit(state, old_zone, binding, new_zone, monitor)
 	state.triggered = true
 
 	pcall(binding.callback, old_zone, monitor)
+end
+
+local function distance_sq(x, y)
+	return x * x + y * y
 end
 
 local function check_zone_direction(zone, dx, dy)
@@ -75,44 +77,34 @@ local function fire(state, binding, monitor)
 end
 
 function M.update(state, x, y, monitor, binding)
-	if not binding then
+	if not binding or state.triggered then
 		return
 	end
 
-	if state.triggered then
+	if state.last_x == nil or state.last_y == nil then
 		return
 	end
 
-	local last_x = state.last_x
-	local last_y = state.last_y
-
-	if last_x == nil or last_y == nil then
-		return
-	end
-
-	local dx = x - last_x
-	local dy = y - last_y
+	local dx = x - state.last_x
+	local dy = y - state.last_y
 
 	if binding.direction then
 		state.direction_x = state.direction_x + dx
 		state.direction_y = state.direction_y + dy
 
-		if not check_direction(binding.direction, state.direction_x, state.direction_y) then
+		if not check_direction(
+			binding.direction,
+			state.direction_x,
+			state.direction_y
+		) then
 			return
 		end
 
 		if binding.distance then
-			local distance = state.direction_x * state.direction_x + state.direction_y * state.direction_y
-
-			if distance < binding.distance * binding.distance then
-				return
-			end
-		end
-
-		if binding.flick_sq then
-			local distance = state.direction_x * state.direction_x + state.direction_y * state.direction_y
-
-			if distance < binding.flick_sq then
+			if distance_sq(
+				state.direction_x,
+				state.direction_y
+			) < binding.distance * binding.distance then
 				return
 			end
 		end
@@ -123,9 +115,7 @@ function M.update(state, x, y, monitor, binding)
 	end
 
 	if binding.velocity_sq then
-		local velocity = dx * dx + dy * dy
-
-		if velocity < binding.velocity_sq then
+		if distance_sq(dx, dy) < binding.velocity_sq then
 			return
 		end
 
@@ -139,7 +129,7 @@ function M.update(state, x, y, monitor, binding)
 	end
 
 	if binding.flick_sq then
-		if (dx * dx + dy * dy) < binding.flick_sq then
+		if distance_sq(dx, dy) < binding.flick_sq then
 			return
 		end
 

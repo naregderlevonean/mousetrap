@@ -15,22 +15,52 @@ local EMPTY_GEOM = {}
 
 local config = nil
 
+local function get_geometry(monitor)
+	if not config or not config.geometry then
+		return EMPTY_GEOM
+	end
+
+	return config.geometry[monitor.name]
+		or config.geometry.default
+		or EMPTY_GEOM
+end
+
+local function reset_position()
+	state.last_x = nil
+	state.last_y = nil
+end
+
+local function update_state_position(x, y)
+	state.last_x = x
+	state.last_y = y
+end
+
+local function same_monitor(a, b)
+	if not a or not b then
+		return false
+	end
+
+	return a.name == b.name
+end
+
 local function tick()
 	if not config then
 		return
 	end
 
 	local cursor = get_cursor()
+
+	if not cursor then
+		return
+	end
+
 	local monitor = get_monitor()
 
 	if not monitor then
 		return
 	end
 
-	local geometry =
-		config.geometry[monitor.name]
-		or config.geometry.default
-		or EMPTY_GEOM
+	local geometry = get_geometry(monitor)
 
 	local x = cursor.x - monitor.x
 	local y = cursor.y - monitor.y
@@ -60,7 +90,7 @@ local function tick()
 
 	if
 		zone ~= state.zone
-		or monitor.name ~= (state.monitor and state.monitor.name)
+		or not same_monitor(state.monitor, monitor)
 		or binding ~= state.active_binding
 	then
 		Trigger.reset(
@@ -79,8 +109,7 @@ local function tick()
 		binding
 	)
 
-	state.last_x = x
-	state.last_y = y
+	update_state_position(x, y)
 end
 
 function M.init(active_config)
@@ -94,9 +123,6 @@ end
 
 function M.start()
 	if not state.timer then
-		state.last_x = nil
-		state.last_y = nil
-
 		state.timer = create_timer(
 			tick,
 			{
@@ -105,11 +131,10 @@ function M.start()
 			}
 		)
 	else
-		state.last_x = nil
-		state.last_y = nil
-
 		state.timer:set_enabled(true)
 	end
+
+	reset_position()
 end
 
 function M.stop()
@@ -119,23 +144,22 @@ function M.stop()
 
 	state.zone = "none"
 	state.monitor = nil
-
 	state.time = 0
 	state.triggered = false
-
-	state.last_x = nil
-	state.last_y = nil
-
 	state.active_binding = nil
-
 	state.direction_x = 0
 	state.direction_y = 0
+
+	reset_position()
 end
 
 function M.toggle()
 	if not state.timer then
 		M.start()
-	elseif state.timer:is_enabled() then
+		return
+	end
+
+	if state.timer:is_enabled() then
 		M.stop()
 	else
 		M.start()
@@ -143,11 +167,11 @@ function M.toggle()
 end
 
 function M.status()
-	if state.timer then
-		return state.timer:is_enabled() == true
+	if not state.timer then
+		return false
 	end
 
-	return false
+	return state.timer:is_enabled() == true
 end
 
 return M
