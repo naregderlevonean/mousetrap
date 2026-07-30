@@ -20,6 +20,18 @@ local function validate_geometry(geometry)
 	return true
 end
 
+local function validate_motion(motion)
+	if type(motion) ~= "table" then
+		return true
+	end
+
+	if motion.timer and not valid_number(motion.timer) then
+		return false
+	end
+
+	return true
+end
+
 local function validate_binding(binding)
 	if type(binding) ~= "table" then
 		return false
@@ -43,6 +55,10 @@ function M.validate(config)
 				return false, "invalid geometry"
 			end
 		end
+	end
+
+	if not validate_motion(config.motion) then
+		return false, "invalid motion"
 	end
 
 	if config.binds then

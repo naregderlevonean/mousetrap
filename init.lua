@@ -1,15 +1,20 @@
 local M = {}
 
-M._VERSION = "0.9.0"
+M._VERSION = "0.10.0"
 
 local path = (...):gsub("%.init$", "")
 
-local core = require(path .. ".core")
-local default = require(path .. ".config")
+local Core = require(path .. ".core")
+local Default = require(path .. ".config")
 local Binding = require(path .. ".binding")
 local Bindings = require(path .. ".bindings")
 local Validator = require(path .. ".validator")
 local Logger = require(path .. ".logger")
+local Errors = require(path .. ".errors")
+local Context = require(path .. ".context")
+local State = require(path .. ".state").state
+
+local context = Context.new()
 
 local function clone(value)
 	if type(value) ~= "table" then
@@ -45,8 +50,14 @@ local function sort_bindings(list)
 	end)
 end
 
+context.state = State
+context.logger = Logger
+context.errors = Errors
+
+Errors.init(Logger)
+
 function M.setup(config)
-	M.config = clone(default)
+	M.config = clone(Default)
 
 	if type(config) == "table" then
 		merge(M.config, config)
@@ -57,12 +68,14 @@ function M.setup(config)
 	local valid, err = Validator.validate(M.config)
 
 	if not valid then
-		Logger.error(err)
+		Errors.capture(err)
 
 		error("mousetrap: invalid configuration: " .. err)
 	end
 
-	core.init(M.config)
+	context.config = M.config
+
+	Core.init(context)
 
 	return M
 end
@@ -77,35 +90,45 @@ function M.reload(config)
 	local valid, err = Validator.validate(M.config)
 
 	if not valid then
-		Logger.error(err)
+		Errors.capture(err)
 
 		return false
 	end
 
-	core.reload(M.config)
+	context.config = M.config
 
-	return M
+	Core.reload(context)
+
+	return true
+end
+
+function M.context()
+	return context
 end
 
 function M.validate(config)
-	local target = clone(default)
+	local target = clone(Default)
 
 	merge(target, config or {})
 
 	return Validator.validate(target)
 end
 
-function M.log_level(level)
-	Logger.set_level(level)
-end
-
 function M.logger()
 	return Logger
 end
 
+function M.errors()
+	return Errors.get()
+end
+
+function M.log_level(level)
+	Logger.set_level(level)
+end
+
 function M.modifiers(mods)
 	return function()
-		core.set_modifiers(mods)
+		Core.set_modifiers(mods)
 	end
 end
 
@@ -156,46 +179,28 @@ function M.unbind(zone, callback)
 	Bindings.clear_cache()
 end
 
-function M.events()
-	return core.events()
-end
-
 function M.state()
-	return core.state()
+	return Core.state()
 end
 
-function M.last_error()
-	return require(path .. ".errors").get()
-end
-
-function M.clear_error()
-	require(path .. ".errors").clear()
-end
-
-function M.debug(enabled)
-	if not M.config then
-		return
-	end
-
-	M.config.debug = enabled == true
-
-	core.reload(M.config)
+function M.events()
+	return Core.events()
 end
 
 function M.start()
-	core.start()
+	Core.start()
 end
 
 function M.stop()
-	core.stop()
+	Core.stop()
 end
 
 function M.toggle()
-	core.toggle()
+	Core.toggle()
 end
 
 function M.status()
-	return core.status()
+	return Core.status()
 end
 
 return M

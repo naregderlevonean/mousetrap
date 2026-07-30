@@ -1,6 +1,6 @@
 local M = {}
 
-local sequence = 0
+local next_id = 0
 
 local function positive_number(value)
 	if type(value) ~= "number" then
@@ -30,6 +30,12 @@ local function copy_modifiers(modifiers)
 	return result
 end
 
+local function generate_id()
+	next_id = next_id + 1
+
+	return next_id
+end
+
 function M.new(callback, options)
 	if type(callback) ~= "function" then
 		error("mousetrap: callback must be a function")
@@ -37,28 +43,31 @@ function M.new(callback, options)
 
 	options = options or {}
 
-	sequence = sequence + 1
-
 	local flick = positive_number(options.flick)
+
 	local velocity = positive_number(options.velocity)
+
 	local distance = positive_number(options.distance)
 
 	local direction = type(options.direction) == "string" and options.direction or nil
 
 	return {
-		id = options.id or ("binding_" .. sequence),
+		id = generate_id(),
 
 		callback = callback,
 
 		delay = (flick or velocity or direction or options.exit) and 0 or (positive_number(options.delay) or 0),
 
 		flick_sq = flick and flick * flick or nil,
+
 		velocity_sq = velocity and velocity * velocity or nil,
 
 		direction = direction,
+
 		distance = distance,
 
 		exit = options.exit == true,
+
 		loop = options.loop == true,
 
 		priority = positive_number(options.priority) or 0,

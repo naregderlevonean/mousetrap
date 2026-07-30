@@ -2,12 +2,9 @@ local M = {}
 
 local path = (...):gsub("%.core$", "")
 
-local state = require(path .. ".state").state
 local Geometry = require(path .. ".geometry")
 local Bindings = require(path .. ".bindings")
 local Trigger = require(path .. ".trigger")
-local Events = require(path .. ".events")
-local Logger = require(path .. ".logger")
 
 local get_cursor = hl.get_cursor_pos
 local get_monitor = hl.get_monitor_at_cursor
@@ -15,14 +12,14 @@ local create_timer = hl.timer
 
 local EMPTY_GEOM = {}
 
-local config = nil
+local context = nil
 
-local function reset_position()
+local function reset_position(state)
 	state.last_x = nil
 	state.last_y = nil
 end
 
-local function get_geometry(monitor)
+local function get_geometry(config, monitor)
 	if not config or not config.geometry then
 		return EMPTY_GEOM
 	end
@@ -34,7 +31,10 @@ local function same_monitor(a, b)
 	return a and b and a.name == b.name
 end
 
-local function process_cursor()
+local function tick()
+	local state = context.state
+	local config = context.config
+
 	if not config then
 		return
 	end
@@ -51,7 +51,7 @@ local function process_cursor()
 		return
 	end
 
-	local geometry = get_geometry(monitor)
+	local geometry = get_geometry(config, monitor)
 
 	local x = cursor.x - monitor.x
 	local y = cursor.y - monitor.y
@@ -78,65 +78,52 @@ local function process_cursor()
 	state.last_y = y
 end
 
-function M.init(active_config)
-	config = active_config
+function M.init(ctx)
+	context = ctx
 
-	state.debug = config.debug == true
-	state.motion = config.motion.zone_direction
-	state.timer_interval = config.motion.timer
+	Bindings.init(ctx)
 
-	Logger.set_level(config.log_level or "warn")
+	local config = ctx.config
+	local state = ctx.state
 
-	Bindings.init(active_config)
+	state.timer_interval = config.motion and config.motion.timer or 16
 end
 
-function M.reload(active_config)
-	local old_zone = state.zone
-	local old_binding = state.active_binding
+function M.reload(ctx)
+	context = ctx
 
-	config = active_config
-
-	state.debug = config.debug == true
-	state.motion = config.motion.zone_direction
-	state.timer_interval = config.motion.timer
-
-	Bindings.reload(active_config)
-
-	state.zone = old_zone
-	state.active_binding = old_binding
-
-	Logger.info("configuration reloaded")
+	Bindings.reload(ctx)
 end
 
 function M.set_modifiers(modifiers)
 	Bindings.set_modifiers(modifiers)
 end
 
-function M.events()
-	return Events
-end
-
-function M.logger()
-	return Logger
-end
-
 function M.start()
-	if not state.timer then
-		state.timer = create_timer(process_cursor, {
+	local state = context.state
+
+	if not state.runtime.timer then
+		state.runtime.timer = create_timer(tick, {
 			type = "repeat",
 			timeout = state.timer_interval,
 		})
 	else
-		state.timer:set_enabled(true)
+		state.runtime.timer:set_enabled(true)
 	end
 
-	reset_position()
+	state.runtime.running = true
+
+	reset_position(state)
 end
 
 function M.stop()
-	if state.timer then
-		state.timer:set_enabled(false)
+	local state = context.state
+
+	if state.runtime.timer then
+		state.runtime.timer:set_enabled(false)
 	end
+
+	state.runtime.running = false
 
 	state.zone = "none"
 	state.monitor = nil
@@ -148,37 +135,28 @@ function M.stop()
 	state.direction_x = 0
 	state.direction_y = 0
 
-	reset_position()
+	reset_position(state)
 end
 
 function M.toggle()
-	if not state.timer then
+	if not context.state.runtime.timer then
 		M.start()
 		return
 	end
 
-	if state.timer:is_enabled() then
+	if context.state.runtime.running then
 		M.stop()
 	else
 		M.start()
 	end
 end
 
-function M.state()
-	return {
-		zone = state.zone,
-		monitor = state.monitor,
-		active_binding = state.active_binding,
-		triggered = state.triggered,
-	}
+function M.status()
+	return context.state.runtime.running == true
 end
 
-function M.status()
-	if not state.timer then
-		return false
-	end
-
-	return state.timer:is_enabled() == true
+function M.state()
+	return context.state
 end
 
 return M

@@ -1,7 +1,10 @@
 local M = {}
 
 M.state = {
-	timer = nil,
+	runtime = {
+		timer = nil,
+		running = false,
+	},
 
 	monitor = nil,
 	zone = "none",

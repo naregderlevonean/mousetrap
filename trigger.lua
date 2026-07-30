@@ -1,28 +1,41 @@
 local M = {}
 
-local path = (...):gsub("%.trigger$", "")
+local directions = {
+	left = function(dx)
+		return dx < 0
+	end,
 
-local Errors = require(path .. ".errors")
-local Events = require(path .. ".events")
+	right = function(dx)
+		return dx > 0
+	end,
 
-local function debug_log(state, ...)
-	if state.debug then
-		print("[mousetrap]", ...)
-	end
+	up = function(_, dy)
+		return dy < 0
+	end,
+
+	down = function(_, dy)
+		return dy > 0
+	end,
+}
+
+local function distance_sq(x, y)
+	return x * x + y * y
 end
 
-local function safe_call(state, callback, ...)
-	local ok, result = pcall(callback, ...)
+local function zone_direction(zone, dx, dy)
+	local state = {
+		top = dy < -5,
+		bottom = dy > 5,
+		left = dx < -5,
+		right = dx > 5,
 
-	if not ok then
-		Errors.capture(result)
+		["top-left"] = dx < -3 and dy < -3,
+		["top-right"] = dx > 3 and dy < -3,
+		["bottom-left"] = dx < -3 and dy > 3,
+		["bottom-right"] = dx > 3 and dy > 3,
+	}
 
-		debug_log(state, result)
-
-		return false
-	end
-
-	return true
+	return state[zone] == true
 end
 
 function M.reset(state, zone, monitor, binding)
@@ -39,15 +52,11 @@ function M.reset(state, zone, monitor, binding)
 	state.direction_y = 0
 
 	if old_binding and old_binding ~= binding and old_binding.on_leave then
-		safe_call(state, old_binding.on_leave, zone, monitor)
-
-		Events.push("leave", old_binding.id)
+		pcall(old_binding.on_leave, zone, monitor)
 	end
 
 	if binding and binding.on_enter then
-		safe_call(state, binding.on_enter, zone, monitor)
-
-		Events.push("enter", binding.id)
+		pcall(binding.on_enter, zone, monitor)
 	end
 end
 
@@ -62,64 +71,19 @@ function M.exit(state, old_zone, binding, new_zone, monitor)
 
 	state.triggered = true
 
-	safe_call(state, binding.callback, old_zone, monitor)
-
-	Events.push("exit", binding.id)
-end
-
-local function distance_sq(x, y)
-	return x * x + y * y
-end
-
-local function check_zone_direction(motion, zone, dx, dy)
-	local cardinal = motion.cardinal
-	local diagonal = motion.diagonal
-
-	if zone == "top" then
-		return dy < -cardinal
-	elseif zone == "bottom" then
-		return dy > cardinal
-	elseif zone == "left" then
-		return dx < -cardinal
-	elseif zone == "right" then
-		return dx > cardinal
-	elseif zone == "top-left" then
-		return dx < -diagonal and dy < -diagonal
-	elseif zone == "top-right" then
-		return dx > diagonal and dy < -diagonal
-	elseif zone == "bottom-left" then
-		return dx < -diagonal and dy > diagonal
-	elseif zone == "bottom-right" then
-		return dx > diagonal and dy > diagonal
-	end
-
-	return false
-end
-
-local function check_direction(direction, dx, dy)
-	if direction == "left" then
-		return dx < 0
-	elseif direction == "right" then
-		return dx > 0
-	elseif direction == "up" then
-		return dy < 0
-	elseif direction == "down" then
-		return dy > 0
-	end
-
-	return false
+	pcall(binding.callback, old_zone, monitor)
 end
 
 local function fire(state, binding, monitor)
-	safe_call(state, binding.callback, state.zone, monitor)
+	local ok, err = pcall(binding.callback, state.zone, monitor)
 
-	if binding.on_trigger then
-		safe_call(state, binding.on_trigger, state.zone, monitor)
+	if not ok then
+		return err
 	end
 
-	Events.push("trigger", binding.id)
-
-	debug_log(state, "trigger", binding.id)
+	if binding.on_trigger then
+		pcall(binding.on_trigger, state.zone, monitor)
+	end
 
 	if binding.loop then
 		state.time = 0
@@ -144,9 +108,12 @@ function M.update(state, x, y, monitor, binding)
 
 	if binding.direction then
 		state.direction_x = state.direction_x + dx
+
 		state.direction_y = state.direction_y + dy
 
-		if not check_direction(binding.direction, state.direction_x, state.direction_y) then
+		local checker = directions[binding.direction]
+
+		if not checker or not checker(state.direction_x, state.direction_y) then
 			return
 		end
 
@@ -167,7 +134,7 @@ function M.update(state, x, y, monitor, binding)
 			return
 		end
 
-		if not check_zone_direction(state.motion, state.zone, dx, dy) then
+		if not zone_direction(state.zone, dx, dy) then
 			return
 		end
 
@@ -181,7 +148,7 @@ function M.update(state, x, y, monitor, binding)
 			return
 		end
 
-		if not check_zone_direction(state.motion, state.zone, dx, dy) then
+		if not zone_direction(state.zone, dx, dy) then
 			return
 		end
 
@@ -190,7 +157,7 @@ function M.update(state, x, y, monitor, binding)
 		return
 	end
 
-	state.time = state.time + state.timer_interval
+	state.time = state.time + 16
 
 	if state.time >= binding.delay then
 		fire(state, binding, monitor)

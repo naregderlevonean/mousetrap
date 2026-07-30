@@ -15,9 +15,10 @@ local function push(level, message)
 	history[#history + 1] = {
 		level = level,
 		message = message,
+		time = os.time(),
 	}
 
-	if #history > 100 then
+	if #history > 200 then
 		table.remove(history, 1)
 	end
 end
@@ -36,11 +37,9 @@ function M.log(level, message)
 	if levels[level] <= current_level then
 		push(level, message)
 
-		if level == "debug" then
-			return
+		if level ~= "debug" then
+			print("[mousetrap][" .. level .. "]", message)
 		end
-
-		print("[mousetrap][" .. level .. "]", message)
 	end
 end
 

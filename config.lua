@@ -1,10 +1,7 @@
 return {
-	geometry = {
-		default = {
-			corner = 4,
-			edge = 2,
-		},
-	},
+	debug = false,
+
+	log_level = "warn",
 
 	motion = {
 		timer = 16,
@@ -15,7 +12,12 @@ return {
 		},
 	},
 
-	debug = false,
+	geometry = {
+		default = {
+			corner = 4,
+			edge = 2,
+		},
+	},
 
 	binds = {},
 }
