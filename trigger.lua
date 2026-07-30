@@ -95,7 +95,6 @@ function M.update(state, x, y, monitor, binding)
 
 	if binding.direction then
 		state.direction_x = state.direction_x + dx
-
 		state.direction_y = state.direction_y + dy
 
 		if not check_direction(binding.direction, state.direction_x, state.direction_y) then
@@ -105,7 +104,7 @@ function M.update(state, x, y, monitor, binding)
 		if binding.distance then
 			local distance = state.direction_x * state.direction_x + state.direction_y * state.direction_y
 
-			if distance < (binding.distance * binding.distance) then
+			if distance < binding.distance * binding.distance then
 				return
 			end
 		end
@@ -119,6 +118,23 @@ function M.update(state, x, y, monitor, binding)
 		end
 
 		fire(state, binding, monitor)
+
+		return
+	end
+
+	if binding.velocity_sq then
+		local velocity = dx * dx + dy * dy
+
+		if velocity < binding.velocity_sq then
+			return
+		end
+
+		if not check_zone_direction(state.zone, dx, dy) then
+			return
+		end
+
+		fire(state, binding, monitor)
+
 		return
 	end
 

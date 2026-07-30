@@ -8,7 +8,9 @@ function M.new(callback, options)
 	options = options or {}
 
 	local modifiers = options.modifiers or options.mod or {}
+
 	local has_flick = type(options.flick) == "number"
+	local has_velocity = type(options.velocity) == "number"
 	local has_direction = type(options.direction) == "string"
 	local has_exit = options.exit == true
 	local has_loop = options.loop == true
@@ -23,8 +25,9 @@ function M.new(callback, options)
 
 	return {
 		callback = callback,
-		delay = (has_flick or has_direction or has_exit) and 0 or (options.delay or 0),
+		delay = (has_flick or has_velocity or has_direction or has_exit) and 0 or (options.delay or 0),
 		flick_sq = has_flick and (options.flick * options.flick) or nil,
+		velocity_sq = has_velocity and (options.velocity * options.velocity) or nil,
 		direction = has_direction and options.direction or nil,
 		distance = type(options.distance) == "number" and options.distance or nil,
 		exit = has_exit,
