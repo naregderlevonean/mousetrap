@@ -7,9 +7,12 @@ function M.reset(state, zone, monitor, binding)
 
 	state.time = 0
 	state.triggered = false
+
+	state.direction_x = 0
+	state.direction_y = 0
 end
 
-local function check_direction(zone, dx, dy)
+local function check_zone_direction(zone, dx, dy)
 	if zone == "top" then
 		return dy < -5
 	elseif zone == "bottom" then
@@ -31,27 +34,73 @@ local function check_direction(zone, dx, dy)
 	return false
 end
 
+local function check_direction(direction, dx, dy)
+	if direction == "left" then
+		return dx < 0
+	elseif direction == "right" then
+		return dx > 0
+	elseif direction == "up" then
+		return dy < 0
+	elseif direction == "down" then
+		return dy > 0
+	end
+
+	return false
+end
+
 function M.update(state, x, y, monitor, binding)
 	if state.triggered or not binding then
 		return
 	end
 
-	if binding.flick_sq then
-		local last_x = state.last_x
-		local last_y = state.last_y
+	local last_x = state.last_x
+	local last_y = state.last_y
 
-		if last_x == nil or last_y == nil then
+	if last_x == nil or last_y == nil then
+		return
+	end
+
+	local dx = x - last_x
+	local dy = y - last_y
+
+	if binding.direction then
+		state.direction_x = state.direction_x + dx
+
+		state.direction_y = state.direction_y + dy
+
+		if not check_direction(binding.direction, state.direction_x, state.direction_y) then
 			return
 		end
 
-		local dx = x - last_x
-		local dy = y - last_y
+		if binding.distance then
+			local distance = state.direction_x * state.direction_x + state.direction_y * state.direction_y
 
+			if distance < (binding.distance * binding.distance) then
+				return
+			end
+		end
+
+		if binding.flick_sq then
+			local distance = state.direction_x * state.direction_x + state.direction_y * state.direction_y
+
+			if distance < binding.flick_sq then
+				return
+			end
+		end
+
+		state.triggered = true
+
+		pcall(binding.callback, state.zone, monitor)
+
+		return
+	end
+
+	if binding.flick_sq then
 		if (dx * dx + dy * dy) < binding.flick_sq then
 			return
 		end
 
-		if not check_direction(state.zone, dx, dy) then
+		if not check_zone_direction(state.zone, dx, dy) then
 			return
 		end
 

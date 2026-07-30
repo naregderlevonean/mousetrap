@@ -10,6 +10,7 @@ function M.new(callback, options)
 	local modifiers = options.modifiers or options.mod or {}
 
 	local has_flick = type(options.flick) == "number"
+	local has_direction = type(options.direction) == "string"
 
 	local binding_modifiers = {}
 
@@ -22,12 +23,20 @@ function M.new(callback, options)
 	return {
 		callback = callback,
 
-		delay = has_flick
+		delay = (has_flick or has_direction)
 			and 0
 			or (options.delay or 0),
 
 		flick_sq = has_flick
 			and (options.flick * options.flick)
+			or nil,
+
+		direction = has_direction
+			and options.direction
+			or nil,
+
+		distance = type(options.distance) == "number"
+			and options.distance
 			or nil,
 
 		modifiers = binding_modifiers,

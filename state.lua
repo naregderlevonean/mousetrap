@@ -14,6 +14,9 @@ M.state = {
 
 	active_binding = nil,
 
+	direction_x = 0,
+	direction_y = 0,
+
 	modifiers = {
 		super = false,
 		shift = false,

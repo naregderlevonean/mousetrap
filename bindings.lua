@@ -22,7 +22,6 @@ function M.set_modifiers(modifiers)
 	end
 end
 
-
 local function modifiers_match(required)
 	for key, value in pairs(required) do
 		if state.modifiers[key] ~= value then
@@ -32,7 +31,6 @@ local function modifiers_match(required)
 
 	return true
 end
-
 
 function M.get_active_binding(zone)
 	if not config or not config.binds then
