@@ -1,6 +1,6 @@
 local M = {}
 
-M._VERSION = "0.8.0"
+M._VERSION = "0.9.0"
 
 local path = (...):gsub("%.init$", "")
 
@@ -8,7 +8,8 @@ local core = require(path .. ".core")
 local default = require(path .. ".config")
 local Binding = require(path .. ".binding")
 local Bindings = require(path .. ".bindings")
-local Errors = require(path .. ".errors")
+local Validator = require(path .. ".validator")
+local Logger = require(path .. ".logger")
 
 local function clone(value)
 	if type(value) ~= "table" then
@@ -53,6 +54,14 @@ function M.setup(config)
 
 	M.config.binds = M.config.binds or {}
 
+	local valid, err = Validator.validate(M.config)
+
+	if not valid then
+		Logger.error(err)
+
+		error("mousetrap: invalid configuration: " .. err)
+	end
+
 	core.init(M.config)
 
 	return M
@@ -65,9 +74,33 @@ function M.reload(config)
 
 	merge(M.config, config or {})
 
+	local valid, err = Validator.validate(M.config)
+
+	if not valid then
+		Logger.error(err)
+
+		return false
+	end
+
 	core.reload(M.config)
 
 	return M
+end
+
+function M.validate(config)
+	local target = clone(default)
+
+	merge(target, config or {})
+
+	return Validator.validate(target)
+end
+
+function M.log_level(level)
+	Logger.set_level(level)
+end
+
+function M.logger()
+	return Logger
 end
 
 function M.modifiers(mods)
@@ -81,10 +114,6 @@ function M.bind(zone, callback, options)
 		error("mousetrap: call setup() before bind()")
 	end
 
-	if type(zone) ~= "string" then
-		error("mousetrap: zone must be a string")
-	end
-
 	local binds = M.config.binds[zone]
 
 	if not binds then
@@ -92,13 +121,23 @@ function M.bind(zone, callback, options)
 		M.config.binds[zone] = binds
 	end
 
-	table.insert(binds, Binding.new(callback, options))
+	local binding = Binding.new(callback, options)
+
+	table.insert(binds, binding)
 
 	sort_bindings(binds)
+
+	Bindings.clear_cache()
+
+	return binding.id
 end
 
 function M.remove_binding(id)
 	return Bindings.remove(id)
+end
+
+function M.find_binding(id)
+	return Bindings.find_by_id(id)
 end
 
 function M.unbind(zone, callback)
@@ -117,24 +156,20 @@ function M.unbind(zone, callback)
 	Bindings.clear_cache()
 end
 
-function M.find_binding(id)
-	return Bindings.find_by_id(id)
-end
-
-function M.last_error()
-	return Errors.get()
-end
-
-function M.clear_error()
-	Errors.clear()
-end
-
 function M.events()
 	return core.events()
 end
 
 function M.state()
 	return core.state()
+end
+
+function M.last_error()
+	return require(path .. ".errors").get()
+end
+
+function M.clear_error()
+	require(path .. ".errors").clear()
 end
 
 function M.debug(enabled)

@@ -7,6 +7,7 @@ local Geometry = require(path .. ".geometry")
 local Bindings = require(path .. ".bindings")
 local Trigger = require(path .. ".trigger")
 local Events = require(path .. ".events")
+local Logger = require(path .. ".logger")
 
 local get_cursor = hl.get_cursor_pos
 local get_monitor = hl.get_monitor_at_cursor
@@ -84,6 +85,8 @@ function M.init(active_config)
 	state.motion = config.motion.zone_direction
 	state.timer_interval = config.motion.timer
 
+	Logger.set_level(config.log_level or "warn")
+
 	Bindings.init(active_config)
 end
 
@@ -101,6 +104,8 @@ function M.reload(active_config)
 
 	state.zone = old_zone
 	state.active_binding = old_binding
+
+	Logger.info("configuration reloaded")
 end
 
 function M.set_modifiers(modifiers)
@@ -109,6 +114,10 @@ end
 
 function M.events()
 	return Events
+end
+
+function M.logger()
+	return Logger
 end
 
 function M.start()
