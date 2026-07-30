@@ -1,13 +1,13 @@
-local Binding = require("mousetrap.binding")
+local Binding = require("binding")
 
-local callback = function() end
+local fixture = require("fixtures.binding")
 
-local binding = Binding.new(callback, {
+local binding = Binding.new(fixture.callback, {
 	flick = 20,
+
 	priority = 5,
-	modifiers = {
-		ctrl = true,
-	},
+
+	modifiers = fixture.modifiers,
 })
 
 assert(type(binding.id) == "number")

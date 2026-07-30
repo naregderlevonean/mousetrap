@@ -5,15 +5,7 @@ local cursor = {
 	y = 0,
 }
 
-local monitor = {
-	name = "default",
-	x = 0,
-	y = 0,
-	width = 1920,
-	height = 1080,
-	scale = 1,
-	transform = 0,
-}
+local monitor = require("fixtures.monitor")
 
 function M.set_cursor(x, y)
 	cursor.x = x

@@ -1,4 +1,4 @@
-local Trigger = require("mousetrap.trigger")
+local Trigger = require("trigger")
 
 local fired = false
 

@@ -1,11 +1,6 @@
-local Geometry = require("mousetrap.geometry")
+local Geometry = require("geometry")
 
-local monitor = {
-	width = 1920,
-	height = 1080,
-	scale = 1,
-	transform = 0,
-}
+local monitor = require("fixtures.monitor")
 
 local config = {
 	corner = 10,
