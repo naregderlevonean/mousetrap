@@ -72,12 +72,6 @@ function M.new(callback, options)
 
 		priority = positive_number(options.priority) or 0,
 
-		on_enter = type(options.on_enter) == "function" and options.on_enter or nil,
-
-		on_leave = type(options.on_leave) == "function" and options.on_leave or nil,
-
-		on_trigger = type(options.on_trigger) == "function" and options.on_trigger or nil,
-
 		modifiers = copy_modifiers(options.modifiers or options.mod),
 	}
 end

@@ -39,8 +39,6 @@ local function zone_direction(zone, dx, dy)
 end
 
 function M.reset(state, zone, monitor, binding)
-	local old_binding = state.active_binding
-
 	state.zone = zone
 	state.monitor = monitor
 	state.active_binding = binding
@@ -50,14 +48,6 @@ function M.reset(state, zone, monitor, binding)
 
 	state.direction_x = 0
 	state.direction_y = 0
-
-	if old_binding and old_binding ~= binding and old_binding.on_leave then
-		pcall(old_binding.on_leave, zone, monitor)
-	end
-
-	if binding and binding.on_enter then
-		pcall(binding.on_enter, zone, monitor)
-	end
 end
 
 function M.exit(state, old_zone, binding, new_zone, monitor)
@@ -79,10 +69,6 @@ local function fire(state, binding, monitor)
 
 	if not ok then
 		return err
-	end
-
-	if binding.on_trigger then
-		pcall(binding.on_trigger, state.zone, monitor)
 	end
 
 	if binding.loop then
@@ -108,7 +94,6 @@ function M.update(state, x, y, monitor, binding)
 
 	if binding.direction then
 		state.direction_x = state.direction_x + dx
-
 		state.direction_y = state.direction_y + dy
 
 		local checker = directions[binding.direction]
@@ -117,10 +102,7 @@ function M.update(state, x, y, monitor, binding)
 			return
 		end
 
-		if
-			binding.distance
-			and distance_sq(state.direction_x, state.direction_y) < binding.distance * binding.distance
-		then
+		if binding.distance and distance_sq(state.direction_x, state.direction_y) < binding.distance * binding.distance then
 			return
 		end
 
