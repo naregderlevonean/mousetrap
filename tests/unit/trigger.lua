@@ -24,7 +24,7 @@ local binding = {
 	end,
 }
 
-Trigger.update(state, 20, 0, {}, binding)
+Trigger.update(state, 20, 0, {}, { binding })
 
 assert(fired == true)
 

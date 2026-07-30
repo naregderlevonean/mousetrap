@@ -31,6 +31,28 @@ local function same_monitor(a, b)
 	return a and b and a.name == b.name
 end
 
+local function same_bindings(a, b)
+	if a == b then
+		return true
+	end
+
+	if not a or not b then
+		return false
+	end
+
+	if #a ~= #b then
+		return false
+	end
+
+	for index = 1, #a do
+		if a[index] ~= b[index] then
+			return false
+		end
+	end
+
+	return true
+end
+
 local function tick()
 	local state = context.state
 	local config = context.config
@@ -58,7 +80,7 @@ local function tick()
 
 	local zone = Geometry.get_zone_at_pos(x, y, monitor, geometry)
 
-	local binding = Bindings.get_active_binding(zone)
+	local bindings = Bindings.get_bindings(zone)
 
 	if zone ~= state.zone then
 		local exit_binding = Bindings.get_exit_binding(state.zone)
@@ -68,11 +90,15 @@ local function tick()
 		end
 	end
 
-	if zone ~= state.zone or not same_monitor(state.monitor, monitor) or binding ~= state.active_binding then
-		Trigger.reset(state, zone, monitor, binding)
+	if
+		zone ~= state.zone
+		or not same_monitor(state.monitor, monitor)
+		or not same_bindings(state.active_bindings, bindings)
+	then
+		Trigger.reset(state, zone, monitor, bindings)
 	end
 
-	Trigger.update(state, x, y, monitor, binding)
+	Trigger.update(state, x, y, monitor, bindings)
 
 	state.last_x = x
 	state.last_y = y
@@ -127,7 +153,8 @@ function M.stop()
 
 	state.zone = "none"
 	state.monitor = nil
-	state.active_binding = nil
+
+	state.active_bindings = nil
 
 	state.time = 0
 	state.triggered = false

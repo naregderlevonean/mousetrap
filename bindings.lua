@@ -4,14 +4,16 @@ local context = nil
 
 local cache = {
 	zone = nil,
-	binding = nil,
+	bindings = nil,
+
 	exit_zone = nil,
 	exit_binding = nil,
 }
 
 local function clear_cache()
 	cache.zone = nil
-	cache.binding = nil
+	cache.bindings = nil
+
 	cache.exit_zone = nil
 	cache.exit_binding = nil
 end
@@ -86,28 +88,33 @@ local function get_zone_bindings(zone)
 	return binds
 end
 
-function M.get_active_binding(zone)
-	if cache.zone == zone then
-		return cache.binding
+function M.get_bindings(zone)
+	if cache.zone == zone and cache.bindings then
+		return cache.bindings
 	end
 
 	cache.zone = zone
-	cache.binding = nil
+	cache.bindings = {}
 
 	local binds = get_zone_bindings(zone)
 
 	if not binds then
-		return nil
+		return cache.bindings
 	end
 
 	for _, binding in ipairs(binds) do
 		if type(binding) == "table" and not binding.exit and modifiers_match(binding.modifiers) then
-			cache.binding = binding
-			return binding
+			table.insert(cache.bindings, binding)
 		end
 	end
 
-	return nil
+	return cache.bindings
+end
+
+function M.get_active_binding(zone)
+	local bindings = M.get_bindings(zone)
+
+	return bindings[1]
 end
 
 function M.get_exit_binding(zone)

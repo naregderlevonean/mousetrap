@@ -1,6 +1,6 @@
 local M = {}
 
-M._VERSION = "0.12.0"
+M._VERSION = "0.12.1"
 
 local path = (...):gsub("%.init$", "")
 

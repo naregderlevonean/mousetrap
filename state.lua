@@ -15,7 +15,7 @@ M.state = {
 	last_x = nil,
 	last_y = nil,
 
-	active_binding = nil,
+	active_bindings = nil,
 
 	direction_x = 0,
 	direction_y = 0,

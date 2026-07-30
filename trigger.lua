@@ -38,10 +38,10 @@ local function zone_direction(zone, dx, dy)
 	return state[zone] == true
 end
 
-function M.reset(state, zone, monitor, binding)
+function M.reset(state, zone, monitor, bindings)
 	state.zone = zone
 	state.monitor = monitor
-	state.active_binding = binding
+	state.active_bindings = bindings
 
 	state.time = 0
 	state.triggered = false
@@ -80,8 +80,78 @@ local function fire(state, binding, monitor)
 	end
 end
 
-function M.update(state, x, y, monitor, binding)
-	if not binding or state.triggered then
+local function check_binding(state, binding, dx, dy, monitor)
+	if binding.direction then
+		state.direction_x = state.direction_x + dx
+		state.direction_y = state.direction_y + dy
+
+		local checker = directions[binding.direction]
+
+		if not checker
+			or not checker(state.direction_x, state.direction_y)
+		then
+			return false
+		end
+
+		if binding.distance
+			and distance_sq(
+				state.direction_x,
+				state.direction_y
+			) < binding.distance * binding.distance
+		then
+			return false
+		end
+
+		fire(state, binding, monitor)
+
+		return true
+	end
+
+
+	if binding.velocity_sq then
+		if distance_sq(dx, dy) < binding.velocity_sq then
+			return false
+		end
+
+		if not zone_direction(state.zone, dx, dy) then
+			return false
+		end
+
+		fire(state, binding, monitor)
+
+		return true
+	end
+
+
+	if binding.flick_sq then
+		if distance_sq(dx, dy) < binding.flick_sq then
+			return false
+		end
+
+		if not zone_direction(state.zone, dx, dy) then
+			return false
+		end
+
+		fire(state, binding, monitor)
+
+		return true
+	end
+
+
+	state.time = state.time + 16
+
+	if state.time >= binding.delay then
+		fire(state, binding, monitor)
+
+		return true
+	end
+
+	return false
+end
+
+
+function M.update(state, x, y, monitor, bindings)
+	if not bindings or state.triggered then
 		return
 	end
 
@@ -92,57 +162,10 @@ function M.update(state, x, y, monitor, binding)
 	local dx = x - state.last_x
 	local dy = y - state.last_y
 
-	if binding.direction then
-		state.direction_x = state.direction_x + dx
-		state.direction_y = state.direction_y + dy
-
-		local checker = directions[binding.direction]
-
-		if not checker or not checker(state.direction_x, state.direction_y) then
+	for _, binding in ipairs(bindings) do
+		if check_binding(state, binding, dx, dy, monitor) then
 			return
 		end
-
-		if binding.distance and distance_sq(state.direction_x, state.direction_y) < binding.distance * binding.distance then
-			return
-		end
-
-		fire(state, binding, monitor)
-
-		return
-	end
-
-	if binding.velocity_sq then
-		if distance_sq(dx, dy) < binding.velocity_sq then
-			return
-		end
-
-		if not zone_direction(state.zone, dx, dy) then
-			return
-		end
-
-		fire(state, binding, monitor)
-
-		return
-	end
-
-	if binding.flick_sq then
-		if distance_sq(dx, dy) < binding.flick_sq then
-			return
-		end
-
-		if not zone_direction(state.zone, dx, dy) then
-			return
-		end
-
-		fire(state, binding, monitor)
-
-		return
-	end
-
-	state.time = state.time + 16
-
-	if state.time >= binding.delay then
-		fire(state, binding, monitor)
 	end
 end
 
