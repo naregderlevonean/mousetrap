@@ -51,7 +51,10 @@ function M.bind(zone, callback, options)
 		M.config.binds[zone] = {}
 	end
 
-	table.insert(M.config.binds[zone], Binding.new(callback, options))
+	table.insert(
+		M.config.binds[zone],
+		Binding.new(callback, options)
+	)
 end
 
 function M.start()

@@ -44,7 +44,27 @@ function M.get_active_binding(zone)
 	end
 
 	for _, binding in ipairs(binds) do
-		if modifiers_match(binding.modifiers) then
+		if not binding.exit and modifiers_match(binding.modifiers) then
+			return binding
+		end
+	end
+
+	return nil
+end
+
+function M.get_exit_binding(zone)
+	if not config or not config.binds then
+		return nil
+	end
+
+	local binds = config.binds[zone]
+
+	if not binds then
+		return nil
+	end
+
+	for _, binding in ipairs(binds) do
+		if binding.exit and modifiers_match(binding.modifiers) then
 			return binding
 		end
 	end

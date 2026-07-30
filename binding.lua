@@ -11,6 +11,7 @@ function M.new(callback, options)
 
 	local has_flick = type(options.flick) == "number"
 	local has_direction = type(options.direction) == "string"
+	local has_exit = options.exit == true
 
 	local binding_modifiers = {}
 
@@ -23,7 +24,7 @@ function M.new(callback, options)
 	return {
 		callback = callback,
 
-		delay = (has_flick or has_direction)
+		delay = (has_flick or has_direction or has_exit)
 			and 0
 			or (options.delay or 0),
 
@@ -38,6 +39,8 @@ function M.new(callback, options)
 		distance = type(options.distance) == "number"
 			and options.distance
 			or nil,
+
+		exit = has_exit,
 
 		modifiers = binding_modifiers,
 	}

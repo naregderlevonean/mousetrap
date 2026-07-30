@@ -7,6 +7,7 @@ function M.get_zone_at_pos(x, y, monitor, geometry)
 	local mw, mh = monitor.width, monitor.height
 
 	local transform = monitor.transform or 0
+
 	if transform % 2 == 1 then
 		mw, mh = mh, mw
 	end

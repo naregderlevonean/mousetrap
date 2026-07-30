@@ -27,24 +27,57 @@ local function tick()
 		return
 	end
 
-	local geometry = config.geometry[monitor.name] or config.geometry.default or EMPTY_GEOM
+	local geometry =
+		config.geometry[monitor.name]
+		or config.geometry.default
+		or EMPTY_GEOM
 
 	local x = cursor.x - monitor.x
 	local y = cursor.y - monitor.y
 
-	local zone = Geometry.get_zone_at_pos(x, y, monitor, geometry)
+	local zone = Geometry.get_zone_at_pos(
+		x,
+		y,
+		monitor,
+		geometry
+	)
 
 	local binding = Bindings.get_active_binding(zone)
+
+	if zone ~= state.zone then
+		local exit_binding = Bindings.get_exit_binding(state.zone)
+
+		if exit_binding then
+			Trigger.exit(
+				state,
+				state.zone,
+				exit_binding,
+				zone,
+				monitor
+			)
+		end
+	end
 
 	if
 		zone ~= state.zone
 		or monitor.name ~= (state.monitor and state.monitor.name)
 		or binding ~= state.active_binding
 	then
-		Trigger.reset(state, zone, monitor, binding)
+		Trigger.reset(
+			state,
+			zone,
+			monitor,
+			binding
+		)
 	end
 
-	Trigger.update(state, x, y, monitor, binding)
+	Trigger.update(
+		state,
+		x,
+		y,
+		monitor,
+		binding
+	)
 
 	state.last_x = x
 	state.last_y = y
@@ -64,10 +97,13 @@ function M.start()
 		state.last_x = nil
 		state.last_y = nil
 
-		state.timer = create_timer(tick, {
-			type = "repeat",
-			timeout = 16,
-		})
+		state.timer = create_timer(
+			tick,
+			{
+				type = "repeat",
+				timeout = 16,
+			}
+		)
 	else
 		state.last_x = nil
 		state.last_y = nil
@@ -91,6 +127,9 @@ function M.stop()
 	state.last_y = nil
 
 	state.active_binding = nil
+
+	state.direction_x = 0
+	state.direction_y = 0
 end
 
 function M.toggle()
