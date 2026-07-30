@@ -1,5 +1,7 @@
 local M = {}
 
+local sequence = 0
+
 local function positive_number(value)
 	if type(value) ~= "number" then
 		return nil
@@ -35,6 +37,8 @@ function M.new(callback, options)
 
 	options = options or {}
 
+	sequence = sequence + 1
+
 	local flick = positive_number(options.flick)
 	local velocity = positive_number(options.velocity)
 	local distance = positive_number(options.distance)
@@ -42,6 +46,8 @@ function M.new(callback, options)
 	local direction = type(options.direction) == "string" and options.direction or nil
 
 	return {
+		id = options.id or ("binding_" .. sequence),
+
 		callback = callback,
 
 		delay = (flick or velocity or direction or options.exit) and 0 or (positive_number(options.delay) or 0),

@@ -70,6 +70,9 @@ local function process_cursor()
 		Trigger.reset(state, zone, monitor, binding)
 	end
 
+	state.motion = config.motion.zone_direction
+	state.timer = config.motion.timer
+
 	Trigger.update(state, x, y, monitor, binding)
 
 	state.last_x = x
@@ -78,7 +81,18 @@ end
 
 function M.init(active_config)
 	config = active_config
+
+	state.debug = config.debug == true
+
 	Bindings.init(active_config)
+end
+
+function M.reload(active_config)
+	config = active_config
+
+	state.debug = config.debug == true
+
+	Bindings.reload(active_config)
 end
 
 function M.set_modifiers(modifiers)
@@ -89,7 +103,7 @@ function M.start()
 	if not state.timer then
 		state.timer = create_timer(process_cursor, {
 			type = "repeat",
-			timeout = 16,
+			timeout = config.motion.timer,
 		})
 	else
 		state.timer:set_enabled(true)
@@ -114,6 +128,15 @@ function M.stop()
 	state.direction_y = 0
 
 	reset_position()
+end
+
+function M.state()
+	return {
+		zone = state.zone,
+		monitor = state.monitor,
+		active_binding = state.active_binding,
+		triggered = state.triggered,
+	}
 end
 
 function M.toggle()

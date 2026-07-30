@@ -1,6 +1,6 @@
 local M = {}
 
-M._VERSION = "0.6.0"
+M._VERSION = "0.7.0"
 
 local path = (...):gsub("%.init$", "")
 
@@ -56,6 +56,18 @@ function M.setup(config)
 	return M
 end
 
+function M.reload(config)
+	if not M.config then
+		return M.setup(config)
+	end
+
+	merge(M.config, config or {})
+
+	core.reload(M.config)
+
+	return M
+end
+
 function M.modifiers(mods)
 	return function()
 		core.set_modifiers(mods)
@@ -67,10 +79,6 @@ function M.bind(zone, callback, options)
 		error("mousetrap: call setup() before bind()")
 	end
 
-	if type(zone) ~= "string" then
-		error("mousetrap: zone must be a string")
-	end
-
 	local binds = M.config.binds[zone]
 
 	if not binds then
@@ -78,10 +86,7 @@ function M.bind(zone, callback, options)
 		M.config.binds[zone] = binds
 	end
 
-	table.insert(
-		binds,
-		Binding.new(callback, options)
-	)
+	table.insert(binds, Binding.new(callback, options))
 
 	sort_bindings(binds)
 end
@@ -97,6 +102,17 @@ function M.unbind(zone, callback)
 		if not callback or binds[index].callback == callback then
 			table.remove(binds, index)
 		end
+	end
+end
+
+function M.state()
+	return core.state()
+end
+
+function M.debug(enabled)
+	if M.config then
+		M.config.debug = enabled == true
+		core.reload(M.config)
 	end
 end
 

@@ -23,6 +23,8 @@ M.state = {
 		ctrl = false,
 		alt = false,
 	},
+
+	debug = false,
 }
 
 return M

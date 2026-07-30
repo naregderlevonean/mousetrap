@@ -1,5 +1,11 @@
 local M = {}
 
+local function debug_log(state, ...)
+	if state.debug then
+		print("[mousetrap]", ...)
+	end
+end
+
 function M.reset(state, zone, monitor, binding)
 	local old_binding = state.active_binding
 
@@ -20,6 +26,8 @@ function M.reset(state, zone, monitor, binding)
 	if binding and binding.on_enter then
 		pcall(binding.on_enter, zone, monitor)
 	end
+
+	debug_log(state, "zone", zone, binding and binding.id or "none")
 end
 
 function M.exit(state, old_zone, binding, new_zone, monitor)
@@ -34,29 +42,34 @@ function M.exit(state, old_zone, binding, new_zone, monitor)
 	state.triggered = true
 
 	pcall(binding.callback, old_zone, monitor)
+
+	debug_log(state, "exit", old_zone)
 end
 
 local function distance_sq(x, y)
 	return x * x + y * y
 end
 
-local function check_zone_direction(zone, dx, dy)
+local function check_zone_direction(config, zone, dx, dy)
+	local cardinal = config.cardinal
+	local diagonal = config.diagonal
+
 	if zone == "top" then
-		return dy < -5
+		return dy < -cardinal
 	elseif zone == "bottom" then
-		return dy > 5
+		return dy > cardinal
 	elseif zone == "left" then
-		return dx < -5
+		return dx < -cardinal
 	elseif zone == "right" then
-		return dx > 5
+		return dx > cardinal
 	elseif zone == "top-left" then
-		return dx < -3 and dy < -3
+		return dx < -diagonal and dy < -diagonal
 	elseif zone == "top-right" then
-		return dx > 3 and dy < -3
+		return dx > diagonal and dy < -diagonal
 	elseif zone == "bottom-left" then
-		return dx < -3 and dy > 3
+		return dx < -diagonal and dy > diagonal
 	elseif zone == "bottom-right" then
-		return dx > 3 and dy > 3
+		return dx > diagonal and dy > diagonal
 	end
 
 	return false
@@ -82,6 +95,8 @@ local function fire(state, binding, monitor)
 	if binding.on_trigger then
 		pcall(binding.on_trigger, state.zone, monitor)
 	end
+
+	debug_log(state, "trigger", binding.id)
 
 	if binding.loop then
 		state.time = 0
@@ -129,7 +144,7 @@ function M.update(state, x, y, monitor, binding)
 			return
 		end
 
-		if not check_zone_direction(state.zone, dx, dy) then
+		if not check_zone_direction(state.motion, state.zone, dx, dy) then
 			return
 		end
 
@@ -143,7 +158,7 @@ function M.update(state, x, y, monitor, binding)
 			return
 		end
 
-		if not check_zone_direction(state.zone, dx, dy) then
+		if not check_zone_direction(state.motion, state.zone, dx, dy) then
 			return
 		end
 
@@ -152,7 +167,7 @@ function M.update(state, x, y, monitor, binding)
 		return
 	end
 
-	state.time = state.time + 16
+	state.time = state.time + state.timer
 
 	if state.time >= binding.delay then
 		fire(state, binding, monitor)
