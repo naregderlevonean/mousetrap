@@ -1,13 +1,25 @@
 local M = {}
 
 function M.reset(state, zone, monitor, binding)
+	local old_binding = state.active_binding
+
 	state.zone = zone
 	state.monitor = monitor
 	state.active_binding = binding
+
 	state.time = 0
 	state.triggered = false
+
 	state.direction_x = 0
 	state.direction_y = 0
+
+	if old_binding and old_binding ~= binding and old_binding.on_leave then
+		pcall(old_binding.on_leave, zone, monitor)
+	end
+
+	if binding and binding.on_enter then
+		pcall(binding.on_enter, zone, monitor)
+	end
 end
 
 function M.exit(state, old_zone, binding, new_zone, monitor)
@@ -67,6 +79,10 @@ end
 local function fire(state, binding, monitor)
 	pcall(binding.callback, state.zone, monitor)
 
+	if binding.on_trigger then
+		pcall(binding.on_trigger, state.zone, monitor)
+	end
+
 	if binding.loop then
 		state.time = 0
 		state.direction_x = 0
@@ -92,21 +108,15 @@ function M.update(state, x, y, monitor, binding)
 		state.direction_x = state.direction_x + dx
 		state.direction_y = state.direction_y + dy
 
-		if not check_direction(
-			binding.direction,
-			state.direction_x,
-			state.direction_y
-		) then
+		if not check_direction(binding.direction, state.direction_x, state.direction_y) then
 			return
 		end
 
-		if binding.distance then
-			if distance_sq(
-				state.direction_x,
-				state.direction_y
-			) < binding.distance * binding.distance then
-				return
-			end
+		if
+			binding.distance
+			and distance_sq(state.direction_x, state.direction_y) < binding.distance * binding.distance
+		then
+			return
 		end
 
 		fire(state, binding, monitor)

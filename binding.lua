@@ -38,23 +38,31 @@ function M.new(callback, options)
 	local flick = positive_number(options.flick)
 	local velocity = positive_number(options.velocity)
 	local distance = positive_number(options.distance)
-	local direction = type(options.direction) == "string" and options.direction or nil
 
-	local immediate =
-		flick ~= nil
-		or velocity ~= nil
-		or direction ~= nil
-		or options.exit == true
+	local direction = type(options.direction) == "string" and options.direction or nil
 
 	return {
 		callback = callback,
-		delay = immediate and 0 or (positive_number(options.delay) or 0),
+
+		delay = (flick or velocity or direction or options.exit) and 0 or (positive_number(options.delay) or 0),
+
 		flick_sq = flick and flick * flick or nil,
 		velocity_sq = velocity and velocity * velocity or nil,
+
 		direction = direction,
 		distance = distance,
+
 		exit = options.exit == true,
 		loop = options.loop == true,
+
+		priority = positive_number(options.priority) or 0,
+
+		on_enter = type(options.on_enter) == "function" and options.on_enter or nil,
+
+		on_leave = type(options.on_leave) == "function" and options.on_leave or nil,
+
+		on_trigger = type(options.on_trigger) == "function" and options.on_trigger or nil,
+
 		modifiers = copy_modifiers(options.modifiers or options.mod),
 	}
 end

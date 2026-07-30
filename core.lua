@@ -15,35 +15,24 @@ local EMPTY_GEOM = {}
 
 local config = nil
 
-local function get_geometry(monitor)
-	if not config or not config.geometry then
-		return EMPTY_GEOM
-	end
-
-	return config.geometry[monitor.name]
-		or config.geometry.default
-		or EMPTY_GEOM
-end
-
 local function reset_position()
 	state.last_x = nil
 	state.last_y = nil
 end
 
-local function update_state_position(x, y)
-	state.last_x = x
-	state.last_y = y
+local function get_geometry(monitor)
+	if not config or not config.geometry then
+		return EMPTY_GEOM
+	end
+
+	return config.geometry[monitor.name] or config.geometry.default or EMPTY_GEOM
 end
 
 local function same_monitor(a, b)
-	if not a or not b then
-		return false
-	end
-
-	return a.name == b.name
+	return a and b and a.name == b.name
 end
 
-local function tick()
+local function process_cursor()
 	if not config then
 		return
 	end
@@ -65,12 +54,7 @@ local function tick()
 	local x = cursor.x - monitor.x
 	local y = cursor.y - monitor.y
 
-	local zone = Geometry.get_zone_at_pos(
-		x,
-		y,
-		monitor,
-		geometry
-	)
+	local zone = Geometry.get_zone_at_pos(x, y, monitor, geometry)
 
 	local binding = Bindings.get_active_binding(zone)
 
@@ -78,38 +62,18 @@ local function tick()
 		local exit_binding = Bindings.get_exit_binding(state.zone)
 
 		if exit_binding then
-			Trigger.exit(
-				state,
-				state.zone,
-				exit_binding,
-				zone,
-				monitor
-			)
+			Trigger.exit(state, state.zone, exit_binding, zone, monitor)
 		end
 	end
 
-	if
-		zone ~= state.zone
-		or not same_monitor(state.monitor, monitor)
-		or binding ~= state.active_binding
-	then
-		Trigger.reset(
-			state,
-			zone,
-			monitor,
-			binding
-		)
+	if zone ~= state.zone or not same_monitor(state.monitor, monitor) or binding ~= state.active_binding then
+		Trigger.reset(state, zone, monitor, binding)
 	end
 
-	Trigger.update(
-		state,
-		x,
-		y,
-		monitor,
-		binding
-	)
+	Trigger.update(state, x, y, monitor, binding)
 
-	update_state_position(x, y)
+	state.last_x = x
+	state.last_y = y
 end
 
 function M.init(active_config)
@@ -123,13 +87,10 @@ end
 
 function M.start()
 	if not state.timer then
-		state.timer = create_timer(
-			tick,
-			{
-				type = "repeat",
-				timeout = 16,
-			}
-		)
+		state.timer = create_timer(process_cursor, {
+			type = "repeat",
+			timeout = 16,
+		})
 	else
 		state.timer:set_enabled(true)
 	end
@@ -144,9 +105,11 @@ function M.stop()
 
 	state.zone = "none"
 	state.monitor = nil
+	state.active_binding = nil
+
 	state.time = 0
 	state.triggered = false
-	state.active_binding = nil
+
 	state.direction_x = 0
 	state.direction_y = 0
 

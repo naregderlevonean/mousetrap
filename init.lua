@@ -1,6 +1,6 @@
 local M = {}
 
-M._VERSION = "0.5.0"
+M._VERSION = "0.6.0"
 
 local path = (...):gsub("%.init$", "")
 
@@ -36,6 +36,12 @@ local function merge(target, source)
 	end
 end
 
+local function sort_bindings(list)
+	table.sort(list, function(a, b)
+		return (a.priority or 0) > (b.priority or 0)
+	end)
+end
+
 function M.setup(config)
 	M.config = clone(default)
 
@@ -65,17 +71,33 @@ function M.bind(zone, callback, options)
 		error("mousetrap: zone must be a string")
 	end
 
-	if type(callback) ~= "function" then
-		error("mousetrap: callback must be a function")
+	local binds = M.config.binds[zone]
+
+	if not binds then
+		binds = {}
+		M.config.binds[zone] = binds
 	end
 
-	local binds = M.config.binds
+	table.insert(
+		binds,
+		Binding.new(callback, options)
+	)
 
-	if not binds[zone] then
-		binds[zone] = {}
+	sort_bindings(binds)
+end
+
+function M.unbind(zone, callback)
+	if not M.config or not M.config.binds[zone] then
+		return
 	end
 
-	table.insert(binds[zone], Binding.new(callback, options))
+	local binds = M.config.binds[zone]
+
+	for index = #binds, 1, -1 do
+		if not callback or binds[index].callback == callback then
+			table.remove(binds, index)
+		end
+	end
 end
 
 function M.start()

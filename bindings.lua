@@ -6,8 +6,23 @@ local state = require(path .. ".state").state
 
 local config = nil
 
+local cache = {
+	zone = nil,
+	binding = nil,
+	exit_zone = nil,
+	exit_binding = nil,
+}
+
+local function clear_cache()
+	cache.zone = nil
+	cache.binding = nil
+	cache.exit_zone = nil
+	cache.exit_binding = nil
+end
+
 function M.init(active_config)
 	config = active_config
+	clear_cache()
 end
 
 function M.set_modifiers(modifiers)
@@ -20,6 +35,8 @@ function M.set_modifiers(modifiers)
 			state.modifiers[key] = value == true
 		end
 	end
+
+	clear_cache()
 end
 
 local function modifiers_match(required)
@@ -36,7 +53,7 @@ local function modifiers_match(required)
 	return true
 end
 
-local function get_bindings(zone)
+local function get_zone_bindings(zone)
 	if not config or type(config.binds) ~= "table" then
 		return nil
 	end
@@ -51,7 +68,14 @@ local function get_bindings(zone)
 end
 
 function M.get_active_binding(zone)
-	local binds = get_bindings(zone)
+	if cache.zone == zone then
+		return cache.binding
+	end
+
+	cache.zone = zone
+	cache.binding = nil
+
+	local binds = get_zone_bindings(zone)
 
 	if not binds then
 		return nil
@@ -60,6 +84,7 @@ function M.get_active_binding(zone)
 	for _, binding in ipairs(binds) do
 		if type(binding) == "table" and not binding.exit then
 			if modifiers_match(binding.modifiers) then
+				cache.binding = binding
 				return binding
 			end
 		end
@@ -69,7 +94,14 @@ function M.get_active_binding(zone)
 end
 
 function M.get_exit_binding(zone)
-	local binds = get_bindings(zone)
+	if cache.exit_zone == zone then
+		return cache.exit_binding
+	end
+
+	cache.exit_zone = zone
+	cache.exit_binding = nil
+
+	local binds = get_zone_bindings(zone)
 
 	if not binds then
 		return nil
@@ -78,6 +110,7 @@ function M.get_exit_binding(zone)
 	for _, binding in ipairs(binds) do
 		if type(binding) == "table" and binding.exit then
 			if modifiers_match(binding.modifiers) then
+				cache.exit_binding = binding
 				return binding
 			end
 		end
