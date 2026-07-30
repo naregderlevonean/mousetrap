@@ -6,6 +6,7 @@ local state = require(path .. ".state").state
 local Geometry = require(path .. ".geometry")
 local Bindings = require(path .. ".bindings")
 local Trigger = require(path .. ".trigger")
+local Events = require(path .. ".events")
 
 local get_cursor = hl.get_cursor_pos
 local get_monitor = hl.get_monitor_at_cursor
@@ -70,9 +71,6 @@ local function process_cursor()
 		Trigger.reset(state, zone, monitor, binding)
 	end
 
-	state.motion = config.motion.zone_direction
-	state.timer = config.motion.timer
-
 	Trigger.update(state, x, y, monitor, binding)
 
 	state.last_x = x
@@ -83,27 +81,41 @@ function M.init(active_config)
 	config = active_config
 
 	state.debug = config.debug == true
+	state.motion = config.motion.zone_direction
+	state.timer_interval = config.motion.timer
 
 	Bindings.init(active_config)
 end
 
 function M.reload(active_config)
+	local old_zone = state.zone
+	local old_binding = state.active_binding
+
 	config = active_config
 
 	state.debug = config.debug == true
+	state.motion = config.motion.zone_direction
+	state.timer_interval = config.motion.timer
 
 	Bindings.reload(active_config)
+
+	state.zone = old_zone
+	state.active_binding = old_binding
 end
 
 function M.set_modifiers(modifiers)
 	Bindings.set_modifiers(modifiers)
 end
 
+function M.events()
+	return Events
+end
+
 function M.start()
 	if not state.timer then
 		state.timer = create_timer(process_cursor, {
 			type = "repeat",
-			timeout = config.motion.timer,
+			timeout = state.timer_interval,
 		})
 	else
 		state.timer:set_enabled(true)
@@ -130,15 +142,6 @@ function M.stop()
 	reset_position()
 end
 
-function M.state()
-	return {
-		zone = state.zone,
-		monitor = state.monitor,
-		active_binding = state.active_binding,
-		triggered = state.triggered,
-	}
-end
-
 function M.toggle()
 	if not state.timer then
 		M.start()
@@ -150,6 +153,15 @@ function M.toggle()
 	else
 		M.start()
 	end
+end
+
+function M.state()
+	return {
+		zone = state.zone,
+		monitor = state.monitor,
+		active_binding = state.active_binding,
+		triggered = state.triggered,
+	}
 end
 
 function M.status()

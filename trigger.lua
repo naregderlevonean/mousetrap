@@ -1,9 +1,28 @@
 local M = {}
 
+local path = (...):gsub("%.trigger$", "")
+
+local Errors = require(path .. ".errors")
+local Events = require(path .. ".events")
+
 local function debug_log(state, ...)
 	if state.debug then
 		print("[mousetrap]", ...)
 	end
+end
+
+local function safe_call(state, callback, ...)
+	local ok, result = pcall(callback, ...)
+
+	if not ok then
+		Errors.capture(result)
+
+		debug_log(state, result)
+
+		return false
+	end
+
+	return true
 end
 
 function M.reset(state, zone, monitor, binding)
@@ -20,14 +39,16 @@ function M.reset(state, zone, monitor, binding)
 	state.direction_y = 0
 
 	if old_binding and old_binding ~= binding and old_binding.on_leave then
-		pcall(old_binding.on_leave, zone, monitor)
+		safe_call(state, old_binding.on_leave, zone, monitor)
+
+		Events.push("leave", old_binding.id)
 	end
 
 	if binding and binding.on_enter then
-		pcall(binding.on_enter, zone, monitor)
-	end
+		safe_call(state, binding.on_enter, zone, monitor)
 
-	debug_log(state, "zone", zone, binding and binding.id or "none")
+		Events.push("enter", binding.id)
+	end
 end
 
 function M.exit(state, old_zone, binding, new_zone, monitor)
@@ -41,18 +62,18 @@ function M.exit(state, old_zone, binding, new_zone, monitor)
 
 	state.triggered = true
 
-	pcall(binding.callback, old_zone, monitor)
+	safe_call(state, binding.callback, old_zone, monitor)
 
-	debug_log(state, "exit", old_zone)
+	Events.push("exit", binding.id)
 end
 
 local function distance_sq(x, y)
 	return x * x + y * y
 end
 
-local function check_zone_direction(config, zone, dx, dy)
-	local cardinal = config.cardinal
-	local diagonal = config.diagonal
+local function check_zone_direction(motion, zone, dx, dy)
+	local cardinal = motion.cardinal
+	local diagonal = motion.diagonal
 
 	if zone == "top" then
 		return dy < -cardinal
@@ -90,11 +111,13 @@ local function check_direction(direction, dx, dy)
 end
 
 local function fire(state, binding, monitor)
-	pcall(binding.callback, state.zone, monitor)
+	safe_call(state, binding.callback, state.zone, monitor)
 
 	if binding.on_trigger then
-		pcall(binding.on_trigger, state.zone, monitor)
+		safe_call(state, binding.on_trigger, state.zone, monitor)
 	end
+
+	Events.push("trigger", binding.id)
 
 	debug_log(state, "trigger", binding.id)
 
@@ -167,7 +190,7 @@ function M.update(state, x, y, monitor, binding)
 		return
 	end
 
-	state.time = state.time + state.timer
+	state.time = state.time + state.timer_interval
 
 	if state.time >= binding.delay then
 		fire(state, binding, monitor)

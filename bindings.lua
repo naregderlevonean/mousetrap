@@ -30,6 +30,10 @@ function M.reload(active_config)
 	clear_cache()
 end
 
+function M.clear_cache()
+	clear_cache()
+end
+
 function M.set_modifiers(modifiers)
 	if type(modifiers) ~= "table" then
 		return
@@ -41,10 +45,6 @@ function M.set_modifiers(modifiers)
 		end
 	end
 
-	clear_cache()
-end
-
-function M.clear_cache()
 	clear_cache()
 end
 
@@ -76,7 +76,7 @@ local function get_zone_bindings(zone)
 	return binds
 end
 
-local function find_binding(zone, exit)
+local function find(zone, exit)
 	local binds = get_zone_bindings(zone)
 
 	if not binds then
@@ -84,7 +84,7 @@ local function find_binding(zone, exit)
 	end
 
 	for _, binding in ipairs(binds) do
-		if type(binding) == "table" and binding.exit == exit and modifiers_match(binding.modifiers) then
+		if binding.exit == exit and modifiers_match(binding.modifiers) then
 			return binding
 		end
 	end
@@ -98,7 +98,7 @@ function M.get_active_binding(zone)
 	end
 
 	cache.zone = zone
-	cache.binding = find_binding(zone, false)
+	cache.binding = find(zone, false)
 
 	return cache.binding
 end
@@ -109,7 +109,7 @@ function M.get_exit_binding(zone)
 	end
 
 	cache.exit_zone = zone
-	cache.exit_binding = find_binding(zone, true)
+	cache.exit_binding = find(zone, true)
 
 	return cache.exit_binding
 end
@@ -128,6 +128,26 @@ function M.find_by_id(id)
 	end
 
 	return nil
+end
+
+function M.remove(id)
+	if not config or not config.binds then
+		return false
+	end
+
+	for _, binds in pairs(config.binds) do
+		for index = #binds, 1, -1 do
+			if binds[index].id == id then
+				table.remove(binds, index)
+
+				clear_cache()
+
+				return true
+			end
+		end
+	end
+
+	return false
 end
 
 return M

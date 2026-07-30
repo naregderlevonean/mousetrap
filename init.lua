@@ -1,12 +1,14 @@
 local M = {}
 
-M._VERSION = "0.7.0"
+M._VERSION = "0.8.0"
 
 local path = (...):gsub("%.init$", "")
 
 local core = require(path .. ".core")
 local default = require(path .. ".config")
 local Binding = require(path .. ".binding")
+local Bindings = require(path .. ".bindings")
+local Errors = require(path .. ".errors")
 
 local function clone(value)
 	if type(value) ~= "table" then
@@ -79,6 +81,10 @@ function M.bind(zone, callback, options)
 		error("mousetrap: call setup() before bind()")
 	end
 
+	if type(zone) ~= "string" then
+		error("mousetrap: zone must be a string")
+	end
+
 	local binds = M.config.binds[zone]
 
 	if not binds then
@@ -89,6 +95,10 @@ function M.bind(zone, callback, options)
 	table.insert(binds, Binding.new(callback, options))
 
 	sort_bindings(binds)
+end
+
+function M.remove_binding(id)
+	return Bindings.remove(id)
 end
 
 function M.unbind(zone, callback)
@@ -103,6 +113,24 @@ function M.unbind(zone, callback)
 			table.remove(binds, index)
 		end
 	end
+
+	Bindings.clear_cache()
+end
+
+function M.find_binding(id)
+	return Bindings.find_by_id(id)
+end
+
+function M.last_error()
+	return Errors.get()
+end
+
+function M.clear_error()
+	Errors.clear()
+end
+
+function M.events()
+	return core.events()
 end
 
 function M.state()
@@ -110,10 +138,13 @@ function M.state()
 end
 
 function M.debug(enabled)
-	if M.config then
-		M.config.debug = enabled == true
-		core.reload(M.config)
+	if not M.config then
+		return
 	end
+
+	M.config.debug = enabled == true
+
+	core.reload(M.config)
 end
 
 function M.start()

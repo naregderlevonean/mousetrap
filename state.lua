@@ -17,6 +17,13 @@ M.state = {
 	direction_x = 0,
 	direction_y = 0,
 
+	motion = {
+		cardinal = 5,
+		diagonal = 3,
+	},
+
+	timer_interval = 16,
+
 	modifiers = {
 		super = false,
 		shift = false,
