@@ -22,20 +22,23 @@ local function distance_sq(x, y)
 	return x * x + y * y
 end
 
-local function zone_direction(zone, dx, dy)
-	local state = {
-		top = dy < -5,
-		bottom = dy > 5,
-		left = dx < -5,
-		right = dx > 5,
+local function zone_direction(zone, dx, dy, state_motion)
+	local cardinal = state_motion and state_motion.cardinal or 5
+	local diagonal = state_motion and state_motion.diagonal or 3
 
-		["top-left"] = dx < -3 and dy < -3,
-		["top-right"] = dx > 3 and dy < -3,
-		["bottom-left"] = dx < -3 and dy > 3,
-		["bottom-right"] = dx > 3 and dy > 3,
+	local check = {
+		top = dy < -cardinal,
+		bottom = dy > cardinal,
+		left = dx < -cardinal,
+		right = dx > cardinal,
+
+		["top-left"] = dx < -diagonal and dy < -diagonal,
+		["top-right"] = dx > diagonal and dy < -diagonal,
+		["bottom-left"] = dx < -diagonal and dy > diagonal,
+		["bottom-right"] = dx > diagonal and dy > diagonal,
 	}
 
-	return state[zone] == true
+	return check[zone] == true
 end
 
 function M.reset(state, zone, monitor, bindings)
@@ -61,13 +64,17 @@ function M.exit(state, old_zone, binding, new_zone, monitor)
 
 	state.triggered = true
 
-	pcall(binding.callback, old_zone, monitor)
+	local ok, err = pcall(binding.callback, old_zone, monitor)
+	if not ok and state.debug then
+		print("[mousetrap][error] Exit callback failed:", err)
+	end
 end
 
 local function fire(state, binding, monitor)
 	local ok, err = pcall(binding.callback, state.zone, monitor)
 
 	if not ok then
+		print("[mousetrap][error] Callback runtime failure:", err)
 		return err
 	end
 
@@ -82,73 +89,68 @@ end
 
 local function check_binding(state, binding, dx, dy, monitor)
 	if binding.direction then
+		local checker = directions[binding.direction]
+		if checker then
+			local moves_correctly = checker(dx, dy)
+			if not moves_correctly and dx ~= 0 and dy ~= 0 then
+				state.direction_x = 0
+				state.direction_y = 0
+			end
+		end
+
 		state.direction_x = state.direction_x + dx
 		state.direction_y = state.direction_y + dy
 
-		local checker = directions[binding.direction]
-
-		if not checker
-			or not checker(state.direction_x, state.direction_y)
-		then
+		if not checker or not checker(state.direction_x, state.direction_y) then
 			return false
 		end
 
-		if binding.distance
-			and distance_sq(
-				state.direction_x,
-				state.direction_y
-			) < binding.distance * binding.distance
+		if
+			binding.distance
+			and distance_sq(state.direction_x, state.direction_y) < binding.distance * binding.distance
 		then
 			return false
 		end
 
 		fire(state, binding, monitor)
-
 		return true
 	end
-
 
 	if binding.velocity_sq then
 		if distance_sq(dx, dy) < binding.velocity_sq then
 			return false
 		end
 
-		if not zone_direction(state.zone, dx, dy) then
+		if not zone_direction(state.zone, dx, dy, state.motion) then
 			return false
 		end
 
 		fire(state, binding, monitor)
-
 		return true
 	end
-
 
 	if binding.flick_sq then
 		if distance_sq(dx, dy) < binding.flick_sq then
 			return false
 		end
 
-		if not zone_direction(state.zone, dx, dy) then
+		if not zone_direction(state.zone, dx, dy, state.motion) then
 			return false
 		end
 
 		fire(state, binding, monitor)
-
 		return true
 	end
 
-
-	state.time = state.time + 16
+	state.time = state.time + (state.timer_interval or 16)
 
 	if state.time >= binding.delay then
 		fire(state, binding, monitor)
-
 		return true
 	end
 
 	return false
 end
-
 
 function M.update(state, x, y, monitor, bindings)
 	if not bindings or state.triggered then

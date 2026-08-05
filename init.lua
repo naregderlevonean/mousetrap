@@ -1,6 +1,6 @@
 local M = {}
 
-M._VERSION = "0.12.1"
+M._VERSION = "0.12.2"
 
 local path = (...):gsub("%.init$", "")
 
@@ -12,7 +12,6 @@ local Validator = require(path .. ".validator")
 local Logger = require(path .. ".logger")
 local Errors = require(path .. ".errors")
 local Context = require(path .. ".context")
-local State = require(path .. ".state").state
 
 local context = Context.new()
 
@@ -50,7 +49,6 @@ local function sort_bindings(list)
 	end)
 end
 
-context.state = State
 context.logger = Logger
 context.errors = Errors
 
@@ -73,6 +71,7 @@ function M.setup(config)
 		error("mousetrap: invalid configuration: " .. err)
 	end
 
+	context.state = clone(require(path .. ".state").state)
 	context.config = M.config
 
 	Core.init(context)

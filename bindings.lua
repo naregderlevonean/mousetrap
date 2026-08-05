@@ -90,7 +90,11 @@ end
 
 function M.get_bindings(zone)
 	if cache.zone == zone and cache.bindings then
-		return cache.bindings
+		local copy = {}
+		for i, v in ipairs(cache.bindings) do
+			copy[i] = v
+		end
+		return copy
 	end
 
 	cache.zone = zone
@@ -99,7 +103,7 @@ function M.get_bindings(zone)
 	local binds = get_zone_bindings(zone)
 
 	if not binds then
-		return cache.bindings
+		return {}
 	end
 
 	for _, binding in ipairs(binds) do
@@ -108,7 +112,11 @@ function M.get_bindings(zone)
 		end
 	end
 
-	return cache.bindings
+	local copy = {}
+	for i, v in ipairs(cache.bindings) do
+		copy[i] = v
+	end
+	return copy
 end
 
 function M.get_active_binding(zone)

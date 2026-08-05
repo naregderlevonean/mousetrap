@@ -5,6 +5,7 @@ local path = (...):gsub("%.core$", "")
 local Geometry = require(path .. ".geometry")
 local Bindings = require(path .. ".bindings")
 local Trigger = require(path .. ".trigger")
+local Events = require(path .. ".events")
 
 local get_cursor = hl.get_cursor_pos
 local get_monitor = hl.get_monitor_at_cursor
@@ -108,17 +109,33 @@ function M.init(ctx)
 	context = ctx
 
 	Bindings.init(ctx)
+	Events.init(ctx)
+	context.events = Events
 
 	local config = ctx.config
 	local state = ctx.state
 
 	state.timer_interval = config.motion and config.motion.timer or 16
+
+	if config.motion and config.motion.zone_direction then
+		state.motion.cardinal = config.motion.zone_direction.cardinal or 5
+		state.motion.diagonal = config.motion.zone_direction.diagonal or 3
+	end
 end
 
 function M.reload(ctx)
 	context = ctx
 
 	Bindings.reload(ctx)
+
+	local config = ctx.config
+	local state = ctx.state
+
+	state.timer_interval = config.motion and config.motion.timer or 16
+	if config.motion and config.motion.zone_direction then
+		state.motion.cardinal = config.motion.zone_direction.cardinal or 5
+		state.motion.diagonal = config.motion.zone_direction.diagonal or 3
+	end
 end
 
 function M.set_modifiers(modifiers)
@@ -184,6 +201,10 @@ end
 
 function M.state()
 	return context.state
+end
+
+function M.events()
+	return context.events
 end
 
 return M
