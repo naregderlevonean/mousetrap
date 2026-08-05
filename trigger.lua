@@ -51,6 +51,26 @@ function M.reset(state, zone, monitor, bindings)
 
 	state.direction_x = 0
 	state.direction_y = 0
+
+	state.binding_states = state.binding_states or {}
+	if bindings then
+		for _, binding in ipairs(bindings) do
+			if not state.binding_states[binding.id] then
+				state.binding_states[binding.id] = {
+					time = 0,
+					direction_x = 0,
+					direction_y = 0,
+					triggered = false,
+				}
+			else
+				local b_state = state.binding_states[binding.id]
+				b_state.time = 0
+				b_state.direction_x = 0
+				b_state.direction_y = 0
+				b_state.triggered = false
+			end
+		end
+	end
 end
 
 function M.exit(state, old_zone, binding, new_zone, monitor)
@@ -58,19 +78,20 @@ function M.exit(state, old_zone, binding, new_zone, monitor)
 		return
 	end
 
-	if new_zone ~= "none" then
+	if old_zone == new_zone then
 		return
 	end
 
 	state.triggered = true
 
-	local ok, err = pcall(binding.callback, old_zone, monitor)
+	local ok, err = pcall(binding.callback, old_zone, new_zone, monitor)
+
 	if not ok and state.debug then
 		print("[mousetrap][error] Exit callback failed:", err)
 	end
 end
 
-local function fire(state, binding, monitor)
+local function fire(state, binding, b_state, monitor)
 	local ok, err = pcall(binding.callback, state.zone, monitor)
 
 	if not ok then
@@ -79,40 +100,51 @@ local function fire(state, binding, monitor)
 	end
 
 	if binding.loop then
-		state.time = 0
-		state.direction_x = 0
-		state.direction_y = 0
+		b_state.time = 0
+		b_state.direction_x = 0
+		b_state.direction_y = 0
 	else
-		state.triggered = true
+		b_state.triggered = true
 	end
 end
 
 local function check_binding(state, binding, dx, dy, monitor)
+	state.binding_states = state.binding_states or {}
+	if not state.binding_states[binding.id] then
+		state.binding_states[binding.id] = { time = 0, direction_x = 0, direction_y = 0, triggered = false }
+	end
+
+	local b_state = state.binding_states[binding.id]
+
+	if b_state.triggered then
+		return false
+	end
+
 	if binding.direction then
 		local checker = directions[binding.direction]
 		if checker then
 			local moves_correctly = checker(dx, dy)
 			if not moves_correctly and dx ~= 0 and dy ~= 0 then
-				state.direction_x = 0
-				state.direction_y = 0
+				b_state.direction_x = 0
+				b_state.direction_y = 0
 			end
 		end
 
-		state.direction_x = state.direction_x + dx
-		state.direction_y = state.direction_y + dy
+		b_state.direction_x = b_state.direction_x + dx
+		b_state.direction_y = b_state.direction_y + dy
 
-		if not checker or not checker(state.direction_x, state.direction_y) then
+		if not checker or not checker(b_state.direction_x, b_state.direction_y) then
 			return false
 		end
 
 		if
 			binding.distance
-			and distance_sq(state.direction_x, state.direction_y) < binding.distance * binding.distance
+			and distance_sq(b_state.direction_x, b_state.direction_y) < binding.distance * binding.distance
 		then
 			return false
 		end
 
-		fire(state, binding, monitor)
+		fire(state, binding, b_state, monitor)
 		return true
 	end
 
@@ -125,7 +157,7 @@ local function check_binding(state, binding, dx, dy, monitor)
 			return false
 		end
 
-		fire(state, binding, monitor)
+		fire(state, binding, b_state, monitor)
 		return true
 	end
 
@@ -138,14 +170,14 @@ local function check_binding(state, binding, dx, dy, monitor)
 			return false
 		end
 
-		fire(state, binding, monitor)
+		fire(state, binding, b_state, monitor)
 		return true
 	end
 
-	state.time = state.time + (state.timer_interval or 16)
+	b_state.time = b_state.time + (state.timer_interval or 16)
 
-	if state.time >= binding.delay then
-		fire(state, binding, monitor)
+	if b_state.time >= binding.delay then
+		fire(state, binding, b_state, monitor)
 		return true
 	end
 
@@ -153,7 +185,7 @@ local function check_binding(state, binding, dx, dy, monitor)
 end
 
 function M.update(state, x, y, monitor, bindings)
-	if not bindings or state.triggered then
+	if not bindings then
 		return
 	end
 
@@ -165,9 +197,7 @@ function M.update(state, x, y, monitor, bindings)
 	local dy = y - state.last_y
 
 	for _, binding in ipairs(bindings) do
-		if check_binding(state, binding, dx, dy, monitor) then
-			return
-		end
+		check_binding(state, binding, dx, dy, monitor)
 	end
 end
 
