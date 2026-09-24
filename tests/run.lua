@@ -1,9 +1,4 @@
-package.path = "./?.lua;"
-	.. "./?/init.lua;"
-	.. "./tests/?.lua;"
-	.. "./tests/?/init.lua;"
-	.. "./tests/?/?.lua;"
-	.. package.path
+package.path = "./?.lua;" .. "./?/init.lua;" .. "../src/?.lua;" .. "../src/?/init.lua"
 
 _G.hl = require("mocks.hl")
 
